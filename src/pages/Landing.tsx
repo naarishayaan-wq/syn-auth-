@@ -138,9 +138,9 @@ export default function Landing() {
          <div className="max-w-7xl mx-auto px-6 flex flex-col items-center">
             <div className="flex items-center gap-2 mb-8 opacity-40">
                <Shield className="h-6 w-6" />
-               <span className="text-xl font-black italic tracking-tighter uppercase">Syn-Auth</span>
+               <span className="text-xl font-black italic tracking-tighter uppercase">SYN AUTH</span>
             </div>
-            <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em]">© 2026 Syn-Auth Systems. All rights reserved.</p>
+            <p className="text-white/20 text-xs font-black uppercase tracking-[0.2em]">© 2026 SYN AUTH SECURITY INC. ALL RIGHTS RESERVED.</p>
          </div>
       </footer>
 

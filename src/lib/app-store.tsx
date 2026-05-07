@@ -58,7 +58,7 @@ type StoreCtx = {
   auditLogs: AuditLog[];
   addAuditLog: (event: string, detail: string, type: AuditLog["type"]) => void;
   refreshSecret: (appId: string) => void;
-  createLicense: (appId: string, appName: string) => void;
+  createLicense: (appId: string, appName: string, expiry?: string) => void;
   selectedAppId: string;
   setSelectedAppId: React.Dispatch<React.SetStateAction<string>>;
   isPremium: boolean;
@@ -171,7 +171,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  function createLicense(appId: string, appName: string) {
+  function createLicense(appId: string, appName: string, expiry: string = "30d") {
+    const days = expiry === "999d" ? 3650 : parseInt(expiry) || 30;
     const newLicense: License = {
       id: `lic_${randHex(8)}`,
       key: `SYNAUTH-${randHex(4).toUpperCase()}-${randHex(4).toUpperCase()}-${randHex(4).toUpperCase()}`,
@@ -179,11 +180,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       appName,
       status: "active",
       user: "Unused",
-      expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      expiresAt: new Date(Date.now() + days * 86_400_000).toISOString(),
       createdAt: new Date().toISOString(),
     };
     setLicenses((prev: any) => [newLicense, ...prev]);
-    addAuditLog("License Created", `New key generated for ${appName}`, "success");
+    addAuditLog("License Created", `New ${expiry} key generated for ${appName}`, "success");
   }
 
   return (

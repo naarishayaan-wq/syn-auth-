@@ -131,7 +131,7 @@ export default defineConfig({
                       return;
                     }
 
-                    // HWID Locking Logic
+                  // HWID Locking Logic
                     const hwid = params.get("hwid") || "unknown";
                     if ((user as any).hwidLock) {
                       if (!(user as any).hwid) {

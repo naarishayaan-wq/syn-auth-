@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { Search, Key, Plus, CheckCircle2, Loader2 } from "lucide-react";
+import { Search, Key, Plus, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/app-store";
 import { License } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 const containerVariants: Variants = {
   hidden: {},

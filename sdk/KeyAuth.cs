@@ -218,6 +218,9 @@ namespace KeyAuth
                     string res = Encoding.UTF8.GetString(raw);
                     
                     if (is_demo) {
+                        // In demo mode, we log the raw response for easier debugging
+                        // Console.WriteLine(" [MOCK RESPONSE] " + res);
+                    }
                         Console.WriteLine($" [KeyAuth] Request: {post_data["type"]} | Response: {res}");
                     }
                     

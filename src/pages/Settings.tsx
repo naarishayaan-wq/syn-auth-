@@ -162,6 +162,37 @@ export default function Settings() {
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
       >
         <div className="flex items-center gap-2 mb-5">
+          <Shield className="h-4 w-4 text-primary" />
+          <h2 className="text-base font-semibold text-white">Advanced Protection</h2>
+        </div>
+        <div className="space-y-4">
+          {[
+            { key: "antiDebug", label: "Anti-Debug", desc: "Prevents reverse engineering and debugger attachment" },
+            { key: "cloudSecret", label: "Cloud Secret Protection", desc: "Obfuscates application secrets during transmission" },
+            { key: "forceHwid", label: "Strict HWID Lock", desc: "Enforces 1:1 hardware mapping with no reset leniency" },
+            { key: "integrity", label: "Binary Integrity Check", desc: "Verifies application hash on every startup" },
+          ].map((item) => (
+            <div key={item.key} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+              <div>
+                <p className="text-sm text-white font-medium">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+              <Switch
+                checked={security[item.key] ?? false}
+                onCheckedChange={(v) => setSecurity((s: any) => ({ ...s, [item.key]: v }))}
+                className="data-[state=checked]:bg-emerald-600"
+              />
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={cardVariants}
+        className="rounded-xl border border-white/10 bg-card p-6"
+        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      >
+        <div className="flex items-center gap-2 mb-5">
           <Bell className="h-4 w-4 text-primary" />
           <h2 className="text-base font-semibold text-white">Notifications</h2>
         </div>
