@@ -21,6 +21,7 @@ function saveLocalUsers(users: any[]) {
 }
 
 export default defineConfig({
+  base: "/syn-auth-/",
   plugins: [
     react(),
     tailwindcss(),
@@ -61,12 +62,16 @@ export default defineConfig({
                     res.end(JSON.stringify({ success: false }));
                   }
                 }
-                else if (type === "login") {
+                else if (type === "login" || type === "license") {
                   const users = getLocalUsers();
-                  const user = users.find((u: any) => u.username === username && u.password === pass);
+                  const key = params.get("key");
+                  
+                  const user = type === "login" 
+                    ? users.find((u: any) => u.username === username && u.password === pass)
+                    : users.find((u: any) => u.key === key && key !== "");
                   
                   if (user) {
-                    console.log(` [MOCK] Login Success: ${username}`);
+                    console.log(` [MOCK] ${type.toUpperCase()} Success: ${user.username}`);
                     res.end(JSON.stringify({ 
                       success: true, 
                       message: "Logged in successfully!",
@@ -83,8 +88,8 @@ export default defineConfig({
                       } 
                     }));
                   } else {
-                    console.warn(` [MOCK] Login Failed: ${username} (Invalid credentials)`);
-                    res.end(JSON.stringify({ success: false, message: "Invalid username or password." }));
+                    console.warn(` [MOCK] ${type.toUpperCase()} Failed: ${type === "login" ? username : key} (Invalid credentials)`);
+                    res.end(JSON.stringify({ success: false, message: type === "login" ? "Invalid username or password." : "Invalid license key." }));
                   }
                 } else {
                   res.end(JSON.stringify({ success: false, message: "Type not supported in local mock." }));

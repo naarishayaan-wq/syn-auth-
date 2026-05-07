@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ParticleBackground } from "@/components/ParticleBackground";
 
 const MOCK_GOOGLE_ACCOUNTS = [
-  { name: "Shaan Computers", email: "admin@gmail.com", avatar: "S" },
-  { name: "Guest User", email: "guest@synauth.dev", avatar: "G" },
+  { name: "Shaan Computers", email: "admin@gmail.com", avatar: "S", image: "/avatar1.png" },
+  { name: "Guest User", email: "guest@synauth.dev", avatar: "G", image: "/avatar2.png" },
 ];
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
@@ -24,6 +24,8 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [isAddingAccount, setIsAddingAccount] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [googlePassword, setGooglePassword] = useState("");
+  const [showGooglePassword, setShowGooglePassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +73,8 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
 
   const selectAccount = (acc: typeof MOCK_GOOGLE_ACCOUNTS[0]) => {
     setSelectedAccount(acc);
-    setConfirmStep(true);
+    setShowGooglePassword(true); // Always ask for password even in Google flow
+    setConfirmStep(false);
     setIsAddingAccount(false);
   };
 
@@ -82,10 +85,19 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const finalizeGoogleLogin = () => {
-    if (!selectedAccount) return;
+  const finalizeGoogleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccount || !googlePassword) return;
     setLoading(true);
+    
     setTimeout(() => {
+      // Simulate validation
+      if (googlePassword.length < 4) {
+        setError("Invalid password for Google account.");
+        setLoading(false);
+        return;
+      }
+      
       localStorage.setItem("synauth_session", "true");
       localStorage.setItem("synauth_user_email", selectedAccount.email);
       localStorage.setItem("synauth_username", selectedAccount.name);
@@ -99,6 +111,8 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setConfirmStep(false);
     setSelectedAccount(null);
     setIsAddingAccount(false);
+    setShowGooglePassword(false);
+    setGooglePassword("");
     setNewName("");
     setNewEmail("");
   };
@@ -237,158 +251,156 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         ) : (
           <motion.div
             key="google-flow"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="w-full max-w-md p-8 z-20"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-[400px] z-50 bg-white rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.1),0_8px_16px_rgba(0,0,0,0.1)] overflow-hidden font-sans"
           >
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-1 shadow-2xl overflow-hidden">
-               <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#4A90E2" d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-bold text-white">Sign in with Google</h2>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Choose an account</p>
-                    </div>
-                  </div>
-                  <button onClick={resetGoogleFlow} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
-               </div>
+            {/* Real Google Header */}
+            <div className="p-8 pb-4 flex flex-col items-center text-center">
+              <svg className="w-12 h-12 mb-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <h2 className="text-2xl font-normal text-[#202124] mb-1 font-['Inter',_sans-serif]">Sign in</h2>
+              <p className="text-[#202124] text-base mb-6 font-['Inter',_sans-serif]">to continue to Syn-Auth</p>
+            </div>
 
-               <div className="p-4 space-y-2">
-                <AnimatePresence mode="wait">
-                   {isAddingAccount ? (
-                     <motion.div
-                       key="add-account-form"
-                       initial={{ opacity: 0, x: 20 }}
-                       animate={{ opacity: 1, x: 0 }}
-                       exit={{ opacity: 0, x: -20 }}
-                       className="p-4 space-y-4"
-                     >
-                       <form onSubmit={handleAddAccount} className="space-y-4">
-                         <div className="space-y-2">
-                           <label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Your Name</label>
-                           <Input 
-                             value={newName}
-                             onChange={(e) => setNewName(e.target.value)}
-                             placeholder="John Doe"
-                             className="bg-black/50 border-white/10 rounded-xl h-11"
-                             required
-                           />
-                         </div>
-                         <div className="space-y-2">
-                           <label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Email Address</label>
-                           <Input 
-                             type="email"
-                             value={newEmail}
-                             onChange={(e) => setNewEmail(e.target.value)}
-                             placeholder="john@example.com"
-                             className="bg-black/50 border-white/10 rounded-xl h-11"
-                             required
-                           />
-                         </div>
-                         <Button type="submit" className="w-full h-11 bg-primary text-white font-bold rounded-xl shadow-lg mt-2">
-                           Add and Continue
-                         </Button>
-                         <button 
-                           type="button"
-                           onClick={() => setIsAddingAccount(false)}
-                           className="w-full text-xs text-muted-foreground hover:text-white transition-colors py-2 uppercase font-bold tracking-widest"
-                         >
-                           Back to accounts
-                         </button>
-                       </form>
-                     </motion.div>
-                   ) : !confirmStep ? (
-                     <motion.div
-                       key="account-list"
-                       initial={{ opacity: 0, x: 20 }}
-                       animate={{ opacity: 1, x: 0 }}
-                       exit={{ opacity: 0, x: -20 }}
-                       className="space-y-2"
-                     >
-                       {MOCK_GOOGLE_ACCOUNTS.map((acc) => (
-                         <button
-                           key={acc.email}
-                           onClick={() => selectAccount(acc)}
-                           className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5"
-                         >
-                           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/20">
-                             {acc.avatar}
-                           </div>
-                           <div className="text-left flex-1 min-w-0">
-                             <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{acc.name}</p>
-                             <p className="text-xs text-muted-foreground truncate">{acc.email}</p>
-                           </div>
-                           <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                         </button>
-                       ))}
-                       <button 
-                         onClick={() => setIsAddingAccount(true)}
-                         className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all text-sm font-medium text-white/70 border border-transparent hover:border-white/5"
-                       >
-                         <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground border border-white/5">
-                           +
-                         </div>
-                         Use another account
-                       </button>
-                     </motion.div>
-                   ) : (
-                     <motion.div
-                       key="confirm-step"
-                       initial={{ opacity: 0, x: 20 }}
-                       animate={{ opacity: 1, x: 0 }}
-                       exit={{ opacity: 0, x: -20 }}
-                       className="p-6 flex flex-col items-center text-center space-y-6"
-                     >
-                        <div className="relative">
-                          <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center text-3xl font-black text-primary border-2 border-primary/40 shadow-[0_0_40px_rgba(255,26,26,0.3)]">
+            <div className="px-8 pb-8">
+              <AnimatePresence mode="wait">
+                {isAddingAccount ? (
+                  <motion.div
+                    key="add-account"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Input 
+                          placeholder="Email or phone"
+                          className="h-14 border-[#dadce0] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] rounded text-base placeholder:text-[#5f6368] bg-transparent text-[#202124]"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="text-[#1a73e8] text-sm font-medium hover:text-[#174ea6] cursor-pointer">Forgot email?</div>
+                      <p className="text-[#5f6368] text-sm leading-relaxed mt-10">
+                        Not your computer? Use Guest mode to sign in privately. <span className="text-[#1a73e8] font-medium cursor-pointer">Learn more</span>
+                      </p>
+                      <div className="flex justify-between items-center pt-8">
+                        <div className="text-[#1a73e8] text-sm font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={() => setIsAddingAccount(false)}>Create account</div>
+                        <Button 
+                          onClick={() => { if(newEmail) selectAccount({ name: newEmail.split('@')[0], email: newEmail, avatar: newEmail[0].toUpperCase() }) }}
+                          className="bg-[#1a73e8] hover:bg-[#174ea6] text-white px-6 h-9 rounded font-medium text-sm"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : showGooglePassword ? (
+                  <motion.div
+                    key="google-password"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <div className="flex flex-col items-center mb-6">
+                      <div className="flex items-center gap-2 px-2 py-1 border border-[#dadce0] rounded-full mb-4">
+                        {selectedAccount?.image ? (
+                          <img src={selectedAccount.image} className="h-5 w-5 rounded-full object-cover" alt="" />
+                        ) : (
+                          <div className="h-5 w-5 rounded-full bg-[#1a73e8] flex items-center justify-center text-[10px] text-white font-bold">
                             {selectedAccount?.avatar}
                           </div>
-                          <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-[#0f0f0f]">
-                            <CheckCircle2 className="h-4 w-4 text-white" />
+                        )}
+                        <span className="text-sm font-medium text-[#3c4043]">{selectedAccount?.email}</span>
+                        <svg className="w-4 h-4 text-[#5f6368]" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-normal text-[#202124] mb-1">Welcome</h3>
+                    </div>
+
+                    <form onSubmit={finalizeGoogleLogin} className="space-y-6">
+                      <div className="relative">
+                        <Input 
+                          type="password"
+                          placeholder="Enter your password"
+                          className="h-14 border-[#dadce0] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] rounded text-base bg-transparent text-[#202124]"
+                          value={googlePassword}
+                          onChange={(e) => setGooglePassword(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="show-pass" className="h-4 w-4 rounded border-[#dadce0] text-[#1a73e8]" />
+                        <label htmlFor="show-pass" className="text-sm text-[#202124]">Show password</label>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-8">
+                        <div className="text-[#1a73e8] text-sm font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={() => setShowGooglePassword(false)}>Back</div>
+                        <Button 
+                          type="submit"
+                          disabled={loading}
+                          className="bg-[#1a73e8] hover:bg-[#174ea6] text-white px-6 h-10 rounded font-medium text-sm min-w-[80px]"
+                        >
+                          {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : "Next"}
+                        </Button>
+                      </div>
+                    </form>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="account-list"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <div className="border border-[#dadce0] rounded-lg overflow-hidden mb-8">
+                      {MOCK_GOOGLE_ACCOUNTS.map((acc, i) => (
+                        <button
+                          key={acc.email}
+                          onClick={() => selectAccount(acc)}
+                          className={`w-full flex items-center gap-3 p-4 hover:bg-[#f8f9fa] transition-colors text-left ${i !== MOCK_GOOGLE_ACCOUNTS.length - 1 ? 'border-b border-[#dadce0]' : ''}`}
+                        >
+                          {acc.image ? (
+                            <img src={acc.image} className="h-7 w-7 rounded-full object-cover" alt="" />
+                          ) : (
+                            <div className="h-7 w-7 rounded-full bg-[#1a73e8] flex items-center justify-center text-xs text-white font-bold">
+                              {acc.avatar}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#3c4043] truncate">{acc.name}</p>
+                            <p className="text-xs text-[#5f6368] truncate">{acc.email}</p>
                           </div>
+                        </button>
+                      ))}
+                      <button 
+                        onClick={() => setIsAddingAccount(true)}
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[#f8f9fa] transition-colors text-left border-t border-[#dadce0]"
+                      >
+                        <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center border border-[#dadce0] text-[#5f6368]">
+                          <UserPlus className="h-4 w-4" />
                         </div>
-                        
-                        <div>
-                          <h2 className="text-xl font-bold text-white">Welcome back, {selectedAccount?.name}</h2>
-                          <p className="text-sm text-muted-foreground mt-1.5 px-4">
-                            You're signing in as <span className="text-white font-medium">{selectedAccount?.email}</span>. Click continue to proceed to your dashboard.
-                          </p>
-                        </div>
+                        <span className="text-sm font-medium text-[#3c4043]">Use another account</span>
+                      </button>
+                    </div>
 
-                        <div className="w-full space-y-3 pt-4">
-                          <Button
-                            onClick={finalizeGoogleLogin}
-                            disabled={loading}
-                            className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest rounded-xl shadow-lg"
-                          >
-                            {loading ? (
-                              <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                            ) : (
-                              "Continue to Dashboard"
-                            )}
-                          </Button>
-                          <button
-                            onClick={() => { setConfirmStep(false); setSelectedAccount(null); }}
-                            className="text-xs text-muted-foreground hover:text-white transition-colors uppercase font-bold tracking-widest"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
-               </div>
+                    <p className="text-[#5f6368] text-xs leading-relaxed mb-8">
+                      To continue, Google will share your name, email address, language preference, and profile picture with Syn-Auth. Before using this app, you can review Syn-Auth's <span className="text-[#1a73e8] cursor-pointer font-medium">privacy policy</span> and <span className="text-[#1a73e8] cursor-pointer font-medium">terms of service</span>.
+                    </p>
 
-               <div className="p-4 bg-white/3 text-[10px] text-muted-foreground text-center border-t border-white/5">
-                 To continue, Google will share your name, email address, and profile picture with Syn-Auth.
-               </div>
+                    <div className="flex justify-start">
+                      <div className="text-[#5f6368] text-xs font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={resetGoogleFlow}>Cancel</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

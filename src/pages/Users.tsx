@@ -31,7 +31,6 @@ export default function Users() {
   const [form, setForm] = useState({
     username: "",
     password: "",
-    key: "",
     appId: apps[0]?.id ?? "",
     expiryPreset: "7d" as ExpiryPreset,
     customExpiry: "",
@@ -52,7 +51,7 @@ export default function Users() {
       u.key.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleGenKey() { setForm((f: typeof form) => ({ ...f, key: generateKey() })); }
+
 
   function showNotification(msg: string) {
     setNotif(msg);
@@ -66,7 +65,7 @@ export default function Users() {
       id: `mu_${Date.now()}`,
       username: form.username.trim(),
       password: form.password.trim(),
-      key: form.key.trim(),
+      key: "", // Keys are now managed separately
       expiresAt,
       hwidLock: form.hwidLock,
       hwid: null,
@@ -75,7 +74,7 @@ export default function Users() {
     };
     setUsers((prev: ManagedUser[]) => [newUser, ...prev]);
     showNotification(`User ${form.username} created successfully!`);
-    setForm({ username: "", password: "", key: "", appId: apps[0]?.id ?? "", expiryPreset: "7d", customExpiry: "", hwidLock: false });
+    setForm({ username: "", password: "", appId: apps[0]?.id ?? "", expiryPreset: "7d", customExpiry: "", hwidLock: false });
     setShowCreate(false);
   }
 
@@ -84,7 +83,7 @@ export default function Users() {
     setUsers((prev: ManagedUser[]) => prev.map((u: ManagedUser) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
   }
   function copyKey(key: string) {
-    navigator.clipboard.writeText(key).catch(() => {});
+    navigator.clipboard.writeText(key).catch(() => { });
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   }
@@ -92,7 +91,7 @@ export default function Users() {
   function handleValidate() {
     if (valType === "key" && !valKey.trim()) return;
     if (valType === "user" && (!valUser.trim() || !valPass.trim())) return;
-    
+
     setValLoading(true);
     setValResult(null);
     setTimeout(() => {
@@ -229,7 +228,7 @@ export default function Users() {
                         <Badge variant="outline" className={
                           expired ? "bg-red-500/10 text-red-400 border-red-500/20 text-xs"
                             : u.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs"
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs"
+                              : "bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs"
                         }>
                           {expired ? "expired" : u.status}
                         </Badge>
@@ -275,17 +274,17 @@ export default function Users() {
                   <div className="h-7 w-7 rounded bg-primary/20 border border-primary/30 flex items-center justify-center">
                     <Plus className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  Create User &amp; Key
+                  Create User
                 </DialogTitle>
                 <DialogDescription className="text-muted-foreground text-sm">
-                  Register a new user and generate their license key.
+                  Register a new user account.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-5 py-2">
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">Application</label>
-                  <select 
-                    value={form.appId} 
+                  <select
+                    value={form.appId}
                     onChange={(e) => {
                       const appName = apps.find((a: any) => a.id === e.target.value)?.name || "App";
                       setForm((f: typeof form) => ({ ...f, appId: e.target.value }));
@@ -310,20 +309,7 @@ export default function Users() {
                     value={form.password} onChange={(e) => setForm((f: any) => ({ ...f, password: e.target.value }))}
                     className="bg-black/50 border-white/10 focus-visible:ring-primary focus-visible:shadow-[0_0_12px_rgba(255,26,26,0.15)]" />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground uppercase tracking-wider">License Key</label>
-                  <div className="flex gap-2">
-                    <Input data-testid="input-new-key" placeholder="SYNAUTH-XXXX-XXXX-XXXX"
-                      value={form.key} onChange={(e) => setForm((f: any) => ({ ...f, key: e.target.value }))}
-                      className="bg-black/50 border-white/10 focus-visible:ring-primary font-mono text-sm" />
-                    <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}>
-                      <Button type="button" variant="outline" onClick={handleGenKey} data-testid="button-generate-key"
-                        className="border-white/10 text-muted-foreground hover:text-primary hover:border-primary/30 whitespace-nowrap">
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Generate
-                      </Button>
-                    </motion.div>
-                  </div>
-                </div>
+
                 <div className="space-y-2">
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">Expiry</label>
                   <div className="grid grid-cols-4 gap-2">
@@ -434,7 +420,7 @@ export default function Users() {
                     </div>
                   </>
                 )}
-                
+
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">HWID (simulated device)</label>
                   <Input data-testid="input-validate-hwid" placeholder="BFEBFBFF000906EA-TESTDEVICE"
