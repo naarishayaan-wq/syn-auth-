@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ParticleBackground } from "@/components/ParticleBackground";
 
 const MOCK_GOOGLE_ACCOUNTS = [
-  { name: "Shaan Computers", email: "admin@gmail.com", avatar: "S", image: "/avatar1.png" },
-  { name: "Guest User", email: "guest@synauth.dev", avatar: "G", image: "/avatar2.png" },
+  { name: "Shaan Computers", email: "admin@gmail.com", avatar: "S", image: "./avatar1.png" },
+  { name: "Guest User", email: "guest@synauth.dev", avatar: "G", image: "./avatar2.png" },
 ];
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
