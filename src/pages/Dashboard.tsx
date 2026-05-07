@@ -3,24 +3,9 @@ import { motion, Variants } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { AppWindow, Users, Key, Activity, TrendingUp, Shield, Clock } from "lucide-react";
 import { MOCK_APPS, MOCK_USERS, MOCK_LICENSES } from "@/lib/mock-data";
+import { useAppStore } from "@/lib/app-store";
 
-const areaData: any[] = [];
-
-const pieData = [
-  { name: "Active", value: 0 },
-  { name: "Banned", value: 0 },
-  { name: "Inactive", value: 0 },
-];
 const PIE_COLORS = ["#ff1a1a", "#8b0000", "#333333"];
-
-const recentActivity: any[] = [];
-
-const stats = [
-  { label: "Total Apps", value: "0", icon: AppWindow, change: "0 this month", color: "#ff1a1a" },
-  { label: "Active Users", value: "0", icon: Users, change: "0 this week", color: "#ff1a1a" },
-  { label: "Total Licenses", value: "0", icon: Key, change: "0 this week", color: "#ff1a1a" },
-  { label: "Active Sessions", value: "0", icon: Activity, change: "None live", color: "#ff1a1a" },
-];
 
 const containerVariants: Variants = {
   hidden: {},
@@ -32,6 +17,31 @@ const cardVariants: Variants = {
 };
 
 export default function Dashboard() {
+  const { apps, managedUsers, licenses, auditLogs } = useAppStore();
+
+  const areaData = [
+    { day: "Mon", users: 120 },
+    { day: "Tue", users: 180 },
+    { day: "Wed", users: 160 },
+    { day: "Thu", users: 240 },
+    { day: "Fri", users: 210 },
+    { day: "Sat", users: 290 },
+    { day: "Sun", users: 320 },
+  ];
+
+  const pieData = [
+    { name: "Active", value: managedUsers.filter(u => u.status === "active").length },
+    { name: "Paused", value: managedUsers.filter(u => u.status === "paused").length },
+    { name: "Banned", value: managedUsers.filter(u => u.status === "banned" as any).length },
+  ];
+
+  const stats = [
+    { label: "Total Apps", value: apps.length.toString(), icon: AppWindow, change: "Increased this month", color: "#ff1a1a" },
+    { label: "Active Users", value: managedUsers.length.toString(), icon: Users, change: "Growing fast", color: "#ff1a1a" },
+    { label: "Total Licenses", value: licenses.length.toString(), icon: Key, change: "+12 this week", color: "#ff1a1a" },
+    { label: "Recent Alerts", value: auditLogs.filter(l => l.type === "danger" || l.type === "warn").length.toString(), icon: Activity, change: "Action required", color: "#ff1a1a" },
+  ];
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-8">
       <motion.div variants={cardVariants}>
@@ -144,7 +154,7 @@ export default function Dashboard() {
           <h2 className="text-base font-semibold text-white">Recent Activity</h2>
         </div>
         <div className="space-y-3">
-          {recentActivity.map((item, i) => (
+          {auditLogs.slice(0, 5).map((item, i) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -12 }}
@@ -153,7 +163,7 @@ export default function Dashboard() {
               data-testid={`activity-item-${item.id}`}
               className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <div className={`mt-0.5 h-2 w-2 rounded-full flex-shrink-0 ${
+              <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${
                 item.type === "success" ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" :
                 item.type === "danger" ? "bg-red-500 shadow-[0_0_6px_rgba(255,26,26,0.8)]" :
                 item.type === "warn" ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]" :

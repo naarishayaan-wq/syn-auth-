@@ -9,6 +9,7 @@ import {
   Terminal,
   X,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/tokens", label: "Tokens", icon: Code2 },
   { href: "/integration", label: "Integration", icon: Terminal },
+  { href: "/audit-log", label: "Audit Log", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -12,8 +12,8 @@ import Users from "@/pages/Users";
 import Tokens from "@/pages/Tokens";
 import Settings from "@/pages/Settings";
 import Integration from "@/pages/Integration";
-import NotFound from "@/pages/not-found";
 import Auth from "@/pages/Auth";
+import AuditLog from "@/pages/AuditLog";
 import { useState, useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -44,6 +44,7 @@ function PageRoutes() {
           <Route path="/tokens" component={Tokens} />
           <Route path="/integration" component={Integration} />
           <Route path="/settings" component={Settings} />
+          <Route path="/audit-log" component={AuditLog} />
           <Route component={NotFound} />
         </Switch>
       </motion.div>

@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { Application, License, MOCK_APPS, MOCK_LICENSES, MOCK_USERS } from "./mock-data";
+import { Application, License, AuditLog, MOCK_APPS, MOCK_LICENSES, MOCK_USERS, MOCK_AUDIT } from "./mock-data";
 import { ManagedUser } from "./key-system";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -55,6 +54,8 @@ type StoreCtx = {
   setManagedUsers: React.Dispatch<React.SetStateAction<ManagedUser[]>>;
   licenses: License[];
   setLicenses: React.Dispatch<React.SetStateAction<License[]>>;
+  auditLogs: AuditLog[];
+  addAuditLog: (event: string, detail: string, type: AuditLog["type"]) => void;
   refreshSecret: (appId: string) => void;
   createLicense: (appId: string, appName: string) => void;
   selectedAppId: string;
@@ -70,6 +71,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return saved ? JSON.parse(saved) : SEED_MANAGED;
   });
   const [licenses, setLicenses] = useState<License[]>(MOCK_LICENSES);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(MOCK_AUDIT);
   const [selectedAppId, setSelectedAppId] = useState(apps[0]?.id ?? "");
 
   // Persist to localStorage
@@ -97,7 +99,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     syncUsers();
   }, [managedUsers]);
 
+  function addAuditLog(event: string, detail: string, type: AuditLog["type"]) {
+    const newLog: AuditLog = {
+      id: `a_${Date.now()}`,
+      event,
+      detail,
+      type,
+      time: "Just now"
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  }
+
   function refreshSecret(appId: string) {
+    const app = apps.find(a => a.id === appId);
+    if (app) {
+      addAuditLog("Secret Refreshed", `App secret regenerated for ${app.name}`, "warn");
+    }
     setApps((prev) =>
       prev.map((a) => (a.id === appId ? { ...a, appSecret: genSecret() } : a))
     );
@@ -115,11 +132,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setLicenses((prev) => [newLicense, ...prev]);
+    addAuditLog("License Created", `New key generated for ${appName}`, "success");
   }
 
   return (
     <AppStoreContext.Provider value={{ 
-      apps, setApps, managedUsers, setManagedUsers, licenses, setLicenses,
+      apps, setApps, managedUsers, setManagedUsers, licenses, setLicenses, auditLogs, addAuditLog,
       refreshSecret, createLicense, selectedAppId, setSelectedAppId 
     }}>
       {children}
