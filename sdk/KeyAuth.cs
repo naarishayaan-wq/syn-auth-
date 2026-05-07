@@ -26,7 +26,7 @@ namespace KeyAuth
         // Development Settings
         // Set to TRUE for local testing (localhost:5173)
         // Set to FALSE for production testing on Render (syn-auth.onrender.com)
-        public bool is_demo = false; 
+        public bool is_demo = true; 
 
         // Production API Endpoint
         private string prod_url = "https://syn-auth.onrender.com/api/1.2/";
@@ -66,11 +66,11 @@ namespace KeyAuth
                 sessionid = get_json_val(res, "sessionid");
                 
                 // Parse app info
-                app_data.numUsers = get_json_val(res, "numUsers", "info");
-                app_data.numOnlineUsers = get_json_val(res, "numOnlineUsers", "info");
-                app_data.numKeys = get_json_val(res, "numKeys", "info");
-                app_data.version = get_json_val(res, "version", "info");
-                app_data.customerPanelLink = get_json_val(res, "customerPanelLink", "info");
+                app_data.numUsers = get_json_val(res, "numUsers", "appinfo");
+                app_data.numOnlineUsers = get_json_val(res, "numOnlineUsers", "appinfo");
+                app_data.numKeys = get_json_val(res, "numKeys", "appinfo");
+                app_data.version = get_json_val(res, "version", "appinfo");
+                app_data.customerPanelLink = get_json_val(res, "customerPanelLink", "appinfo");
 
                 response.success = true;
                 response.message = "Initialized successfully.";
@@ -133,6 +133,26 @@ namespace KeyAuth
                 response.success = false;
                 response.message = get_json_val(res, "message");
             }
+        }
+
+        public string create_license(string mask, string time, string amount)
+        {
+            NameValueCollection values = new NameValueCollection();
+            values.Add("type", "create_license");
+            values.Add("mask", mask);
+            values.Add("time", time);
+            values.Add("amount", amount);
+            values.Add("sessionid", sessionid);
+            values.Add("name", name);
+            values.Add("ownerid", ownerid);
+
+            string res = req(values);
+
+            if (get_json_val(res, "success") == "true")
+            {
+                return get_json_val(res, "key");
+            }
+            return "";
         }
 
         #endregion

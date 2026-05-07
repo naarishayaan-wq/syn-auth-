@@ -185,6 +185,10 @@ export default defineConfig({
                     console.warn(` [MOCK] ❌ ${type.toUpperCase()} Failed: ${type === "login" ? username : key} (Invalid credentials)`);
                     res.end(JSON.stringify({ success: false, message: type === "login" ? "Invalid username or password." : "Invalid license key." }));
                   }
+                } else if (type === "create_license") {
+                  const newKey = "SYNAUTH-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                  console.log(` [MOCK] 🔑 Generated key: ${newKey}`);
+                  res.end(JSON.stringify({ success: true, key: newKey }));
                 } else {
                   res.end(JSON.stringify({ success: false, message: "Type not supported in local mock." }));
                 }
