@@ -18,15 +18,15 @@ namespace KeyAuth
          */
         public string name = "ENTER_NAME_HERE";     // Paste Name Here
         public string ownerid = "ENTER_OWNERID_HERE"; // Paste Owner ID Here
-        public string secret = "";   // Default empty
-        public string version = "1.0"; // Default version
+        public string secret = "";   // Not required for local testing
+        public string version = "1.0"; // Must match your dashboard app version
 
         /*
          * ═══════════════════════════════════════════════════════
          * DEVELOPMENT SETTINGS
          * ═══════════════════════════════════════════════════════
          */
-        public bool is_demo = true; // Set to TRUE for Localhost Dashboard, FALSE for real KeyAuth.win
+        public bool is_demo = true; // IMPORTANT: Set to TRUE for local dashboard, FALSE for production KeyAuth.win
 
         private string sessionid;
         public user_data_class user_data = new user_data_class();
@@ -78,6 +78,7 @@ namespace KeyAuth
         public void login(string user, string pass) => auth("login", user, pass);
         public void register(string user, string pass, string key) => auth("register", user, pass, key);
         public void license(string key) => auth("license", "", "", key);
+        public void upgrade(string user, string key) => auth("upgrade", user, "", key);
 
         private void auth(string type, string user, string pass, string key = "")
         {
@@ -112,7 +113,71 @@ namespace KeyAuth
                 user_data.createdate = get_json_val(res, "createdate", "info");
                 user_data.lastlogin = get_json_val(res, "lastlogin", "info");
                 user_data.expiry = get_json_val(res, "expiry", "info");
+                
+                var subs = get_json_val(res, "subscriptions", "info");
+                if (!string.IsNullOrEmpty(subs)) {
+                    // Simple parsing for the first subscription
+                    user_data.subscriptions = new List<DataSubscription>();
+                    user_data.subscriptions.Add(new DataSubscription {
+                        subscription = get_json_val(res, "subscription", "subscriptions"),
+                        expiry = get_json_val(res, "expiry", "subscriptions"),
+                        timeleft = get_json_val(res, "timeleft", "subscriptions")
+                    });
+                }
             }
+        }
+
+        public void check()
+        {
+            if (string.IsNullOrEmpty(sessionid)) return;
+            NameValueCollection values = new NameValueCollection();
+            values.Add("type", "check");
+            values.Add("sessionid", sessionid);
+            values.Add("name", name);
+            values.Add("ownerid", ownerid);
+            req(values);
+        }
+
+        public string var(string varid)
+        {
+            if (string.IsNullOrEmpty(sessionid)) return "";
+            NameValueCollection values = new NameValueCollection();
+            values.Add("type", "var");
+            values.Add("varid", varid);
+            values.Add("sessionid", sessionid);
+            values.Add("name", name);
+            values.Add("ownerid", ownerid);
+            string res = req(values);
+            return (get_json_val(res, "success") == "true") ? get_json_val(res, "message") : "";
+        }
+
+        public void log(string message)
+        {
+            if (string.IsNullOrEmpty(sessionid)) return;
+            NameValueCollection values = new NameValueCollection();
+            values.Add("type", "log");
+            values.Add("pcuser", Environment.UserName);
+            values.Add("message", message);
+            values.Add("sessionid", sessionid);
+            values.Add("name", name);
+            values.Add("ownerid", ownerid);
+            req(values);
+        }
+
+        public string webhook(string webid, string param, string body = "", string conttype = "")
+        {
+            if (string.IsNullOrEmpty(sessionid)) return "";
+            NameValueCollection values = new NameValueCollection();
+            values.Add("type", "webhook");
+            values.Add("webid", webid);
+            values.Add("params", param);
+            values.Add("body", body);
+            values.Add("conttype", conttype);
+            values.Add("sessionid", sessionid);
+            values.Add("name", name);
+            values.Add("ownerid", ownerid);
+            string res = req(values);
+            return (get_json_val(res, "success") == "true") ? get_json_val(res, "response") : "";
         }
 
         public string create_license(string mask, string time, string amount)
@@ -142,34 +207,81 @@ namespace KeyAuth
             {
                 using (WebClient client = new WebClient())
                 {
-                    // DIRECT CONNECT TO LOCALHOST IF DEMO IS TRUE
+                    // If running on localhost, use the local dashboard. Otherwise use the production KeyAuth server.
                     string url = is_demo ? "http://localhost:5173/api/1.2/" : "https://keyauth.win/api/1.2/";
+                    
+                    if (is_demo && (name == "ENTER_NAME_HERE" || ownerid == "ENTER_OWNERID_HERE")) {
+                        Console.WriteLine(" [KeyAuth] ⚠️ Warning: You are using placeholder credentials. Login might fail.");
+                    }
+
                     byte[] raw = client.UploadValues(url, post_data);
-                    return Encoding.UTF8.GetString(raw);
+                    string res = Encoding.UTF8.GetString(raw);
+                    
+                    if (is_demo) {
+                        Console.WriteLine($" [KeyAuth] Request: {post_data["type"]} | Response: {res}");
+                    }
+                    
+                    return res;
                 }
             }
             catch (WebException ex)
             {
-                return "{\"success\":false,\"message\":\"Connection failed: " + ex.Status + "\"}";
+                string errorMsg = "Connection failed. ";
+                if (ex.Status == WebExceptionStatus.ConnectFailure) {
+                    errorMsg += "Is your local dashboard running? (npm run dev)";
+                    if (is_demo) {
+                        System.Windows.Forms.MessageBox.Show("Could not connect to local dashboard!\n\nMake sure 'npm run dev' is running in your terminal.", "KeyAuth Connection Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    }
+                } else {
+                    using (var stream = ex.Response?.GetResponseStream())
+                    using (var reader = new StreamReader(stream)) {
+                        errorMsg += reader.ReadToEnd();
+                    }
+                }
+                
+                if (is_demo) Console.WriteLine($" [KeyAuth] ❌ Error: {errorMsg}");
+                return "{\"success\":false,\"message\":\"" + errorMsg + "\"}";
             }
         }
 
         private string get_json_val(string json, string key, string obj = "")
         {
             try {
-                json = json.Replace("\r", "").Replace("\n", "");
-                string pattern = string.IsNullOrEmpty(obj) ? "\"" + key + "\":\\s*\"(.*?)\"" : "\"" + obj + "\":\\s*\\{.*?\"" + key + "\":\\s*\"(.*?)\"";
-                Match match = Regex.Match(json, pattern);
-                if (match.Success) return match.Groups[1].Value;
-                pattern = string.IsNullOrEmpty(obj) ? "\"" + key + "\":\\s*(true|false|[0-9\\.]+)" : "\"" + obj + "\":\\s*\\{.*?\"" + key + "\":\\s*(true|false|[0-9\\.]+)";
-                match = Regex.Match(json, pattern);
-                return match.Success ? match.Groups[1].Value : "";
+                if (string.IsNullOrEmpty(json)) return "";
+                json = json.Replace("\r", "").Replace("\n", "").Trim();
+                
+                string pattern;
+                if (!string.IsNullOrEmpty(obj)) {
+                    // Match key inside a nested object/array
+                    pattern = "\"" + obj + "\":\\s*[\\{\\[][^\\{\\[]*?\"" + key + "\":\\s*\"(.*?)\"";
+                    Match match = Regex.Match(json, pattern);
+                    if (match.Success) return match.Groups[1].Value;
+
+                    pattern = "\"" + obj + "\":\\s*[\\{\\[][^\\{\\[]*?\"" + key + "\":\\s*(true|false|[0-9\\.]+)";
+                    match = Regex.Match(json, pattern);
+                    if (match.Success) return match.Groups[1].Value;
+                } else {
+                    // Match key at root level
+                    pattern = "\"" + key + "\":\\s*\"(.*?)\"";
+                    Match match = Regex.Match(json, pattern);
+                    if (match.Success) return match.Groups[1].Value;
+
+                    pattern = "\"" + key + "\":\\s*(true|false|[0-9\\.]+)";
+                    match = Regex.Match(json, pattern);
+                    if (match.Success) return match.Groups[1].Value;
+                }
+                
+                return "";
             } catch { return ""; }
         }
 
         private string get_hwid()
         {
-            try { return WindowsIdentity.GetCurrent().User.Value; }
+            try { 
+                // Reliable HWID for Windows
+                string id = WindowsIdentity.GetCurrent().User.Value;
+                return id;
+            }
             catch { return "unknown_hwid"; }
         }
 
@@ -177,7 +289,12 @@ namespace KeyAuth
 
         #region Data Classes
 
-        public class user_data_class { public string username, ip, hwid, createdate, lastlogin, expiry; }
+        public class user_data_class 
+        { 
+            public string username, ip, hwid, createdate, lastlogin, expiry;
+            public List<DataSubscription> subscriptions = new List<DataSubscription>();
+        }
+        public class DataSubscription { public string subscription, expiry, timeleft; }
         public class app_data_class { public string numUsers, numOnlineUsers, numKeys, version, customerPanelLink, downloadLink; }
         public class response_class { public bool success; public string message; }
 

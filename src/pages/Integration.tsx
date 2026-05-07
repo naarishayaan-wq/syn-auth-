@@ -133,14 +133,26 @@ export default function Integration() {
 
       {/* Initialization Code */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key="sdk"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.18 }}
-          className="space-y-4 mt-8"
-        >
+          <motion.div
+            variants={cardVariants}
+            className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-start gap-3 mt-4"
+          >
+            <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="text-xs text-primary/80 leading-relaxed">
+              <p className="font-bold mb-1 uppercase tracking-wider">Development Tip</p>
+              When testing locally, ensure <code className="font-mono bg-primary/10 px-1 rounded text-white">is_demo = true</code> in your C# SDK. 
+              The SDK will connect to <code className="font-mono bg-primary/10 px-1 rounded text-white">localhost:5173</code> to sync with this dashboard.
+            </div>
+          </motion.div>
+
+          <motion.div
+            key="sdk"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="space-y-4 mt-8"
+          >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">

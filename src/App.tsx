@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import React, { useState, useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +16,8 @@ import Integration from "@/pages/Integration";
 import NotFound from "@/pages/not-found";
 import Auth from "@/pages/Auth";
 import AuditLog from "@/pages/AuditLog";
-import { useState, useEffect } from "react";
+import Pricing from "@/pages/Pricing";
+import Landing from "@/pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +39,7 @@ function PageRoutes() {
         exit="exit"
         style={{ width: "100%" }}
       >
-        <Switch location={location}>
+        <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/applications" component={Applications} />
           <Route path="/licenses" component={Licenses} />
@@ -46,12 +48,15 @@ function PageRoutes() {
           <Route path="/integration" component={Integration} />
           <Route path="/settings" component={Settings} />
           <Route path="/audit-log" component={AuditLog} />
+          <Route path="/pricing" component={Pricing} />
           <Route component={NotFound} />
         </Switch>
       </motion.div>
     </AnimatePresence>
   );
 }
+
+
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -77,18 +82,37 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Auth onLogin={() => setIsAuthenticated(true)} />;
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppStoreProvider>
-          <WouterRouter base={((import.meta as any).env.BASE_URL || "").replace(/\/$/, "")}>
-            <Layout>
-              <PageRoutes />
-            </Layout>
+          <WouterRouter base={(import.meta.env.BASE_URL || "").replace(/\/$/, "")}>
+            <Switch>
+              <Route path="/auth">
+                {!isAuthenticated ? (
+                  <Auth onLogin={() => setIsAuthenticated(true)} />
+                ) : (
+                  <Redirect to="/" />
+                )}
+              </Route>
+              
+              <Route path="/">
+                 {isAuthenticated ? (
+                   <Layout><PageRoutes /></Layout>
+                 ) : (
+                   <Landing />
+                 )}
+              </Route>
+
+              {/* Catch-all for protected routes */}
+              <Route path="/:rest*">
+                {isAuthenticated ? (
+                  <Layout><PageRoutes /></Layout>
+                ) : (
+                  <Landing />
+                )}
+              </Route>
+            </Switch>
           </WouterRouter>
         </AppStoreProvider>
         <Toaster />

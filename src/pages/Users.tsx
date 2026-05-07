@@ -60,12 +60,20 @@ export default function Users() {
 
   function handleCreate() {
     if (!form.username.trim()) return;
+    
+    // Check for duplicates
+    const exists = users.find((u: ManagedUser) => u.username.toLowerCase() === form.username.trim().toLowerCase());
+    if (exists) {
+      showNotification(`Error: User "${form.username}" already exists!`);
+      return;
+    }
+
     const expiresAt = expiryFromPreset(form.expiryPreset, form.expiryPreset === "custom" ? form.customExpiry : undefined);
     const newUser: ManagedUser = {
       id: `mu_${Date.now()}`,
       username: form.username.trim(),
       password: form.password.trim(),
-      key: "", // Keys are now managed separately
+      key: generateKey(),
       expiresAt,
       hwidLock: form.hwidLock,
       hwid: null,

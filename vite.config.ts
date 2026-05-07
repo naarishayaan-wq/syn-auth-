@@ -21,7 +21,7 @@ function saveLocalUsers(users: any[]) {
 }
 
 export default defineConfig({
-  base: "/syn-auth-/",
+  base: "/",
   plugins: [
     react(),
     tailwindcss(),
@@ -34,21 +34,54 @@ export default defineConfig({
             req.on("data", (chunk) => { body += chunk; });
             req.on("end", () => {
               try {
+                // Ensure body is not empty
+                if (!body) {
+                   res.end(JSON.stringify({ success: false, message: "Empty request body" }));
+                   return;
+                }
+
                 const params = new URLSearchParams(body);
                 const type = params.get("type");
-                const username = params.get("username");
-                const pass = params.get("pass");
+                const username = (params.get("username") || "").trim();
+                const pass = (params.get("pass") || "").trim();
+                const key = (params.get("key") || "").trim();
+                const appName = params.get("name") || "Default App";
+                const ownerId = params.get("ownerid") || "OWN-1234";
 
                 res.setHeader("Content-Type", "application/json");
-                console.log(`\n [${new Date().toLocaleTimeString()}] 🟢 Request: ${type} | User: ${username || "N/A"}`);
+                res.setHeader("Access-Control-Allow-Origin", "*");
+                res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+                res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+                
+                // Load apps and users
+                let apps = [];
+                try {
+                  apps = JSON.parse(fs.readFileSync("./synauth_apps_backup.json", "utf-8") || "[]");
+                } catch (e) { apps = []; }
+
+                let currentApp = apps.find((a: any) => a.name === appName && a.ownerId === ownerId);
+
+                // LOCAL DEV LENIENCY: If no exact match, just use the first app available
+                if (!currentApp && apps.length > 0) {
+                  currentApp = apps[0];
+                  console.log(` [MOCK] 🛠️  Auto-matched to app: ${currentApp.name}`);
+                }
+
+                console.log(` [${new Date().toLocaleTimeString()}] 🟢 Request: ${type.toUpperCase()} | App: ${appName} | User: ${username || "N/A"} | Pass: ${pass || "N/A"} | Key: ${key || "N/A"}`);
 
                 if (type === "init") {
                   const users = getLocalUsers();
                   res.end(JSON.stringify({ 
                     success: true, 
                     message: "Initialized",
-                    sessionid: "local_session", 
-                    appinfo: { version: "1.0", numUsers: users.length.toString(), numOnlineUsers: "1", developer_mode: "0" } 
+                    sessionid: "local_session_" + Math.random().toString(36).substring(7), 
+                    appinfo: { 
+                        version: currentApp?.version || "1.0", 
+                        numUsers: users.length.toString(), 
+                        numOnlineUsers: "1", 
+                        developer_mode: "0",
+                        name: currentApp?.name || "Mock App"
+                    } 
                   }));
                 } 
                 else if (type === "sync") {
@@ -56,22 +89,63 @@ export default defineConfig({
                     const usersRaw = params.get("users");
                     const users = JSON.parse(usersRaw || "[]");
                     saveLocalUsers(users);
-                    console.log(` [MOCK] Synced ${users.length} users to database.`);
-                    res.end(JSON.stringify({ success: true, message: "Synced " + users.length + " users" }));
+                    
+                    const appsRaw = params.get("apps");
+                    if (appsRaw) {
+                      fs.writeFileSync("./synauth_apps_backup.json", appsRaw);
+                    }
+                    
+                    console.log(` [MOCK] 🔄 Synced ${users.length} users and ${JSON.parse(appsRaw || "[]").length} apps.`);
+                    res.end(JSON.stringify({ success: true, message: "Synced successfully" }));
                   } catch (e) {
-                    res.end(JSON.stringify({ success: false }));
+                    res.end(JSON.stringify({ success: false, message: "Sync failed" }));
                   }
                 }
                 else if (type === "login" || type === "license") {
                   const users = getLocalUsers();
-                  const key = params.get("key");
                   
-                  const user = type === "login" 
-                    ? users.find((u: any) => u.username === username && u.password === pass)
-                    : users.find((u: any) => u.key === key && key !== "");
+                  if (type === "login" && (username === "" || pass === "")) {
+                    res.end(JSON.stringify({ success: false, message: "Username and password cannot be empty." }));
+                    return;
+                  }
+
+                  // Find user:
+                  // 1. Try master account (admin/admin)
+                  // 2. Try standard login (case-insensitive username)
+                  // 3. Try license key login
+                  // 4. FALLBACK: If login fails, check if the username was actually a key
+                  let user = (username.toLowerCase() === "admin" && pass === "admin")
+                    ? { username: "admin", password: "admin", status: "active", expiresAt: "2030-01-01T00:00:00Z" }
+                    : (type === "login" 
+                        ? users.find((u: any) => u.username.toLowerCase() === username.toLowerCase() && (u.password || "") === pass)
+                        : users.find((u: any) => u.key === key && key !== ""));
+
+                  if (!user && type === "login") {
+                     user = users.find((u: any) => u.key === username);
+                     if (user) console.log(` [MOCK] 💡 Tip: User logged in using Key in Username field.`);
+                  }
                   
                   if (user) {
-                    console.log(` [MOCK] ${type.toUpperCase()} Success: ${user.username}`);
+                    if ((user as any).status === "paused") {
+                      res.end(JSON.stringify({ success: false, message: "Your account is currently paused." }));
+                      return;
+                    }
+
+                    // HWID Locking Logic
+                    const hwid = params.get("hwid") || "unknown";
+                    if ((user as any).hwidLock) {
+                      if (!(user as any).hwid) {
+                        (user as any).hwid = hwid;
+                        saveLocalUsers(users);
+                        console.log(` [MOCK] 🔐 Registered HWID for ${user.username}: ${hwid}`);
+                      } else if ((user as any).hwid !== hwid) {
+                        console.warn(` [MOCK] ❌ HWID Mismatch for ${user.username}: expected ${(user as any).hwid}, got ${hwid}`);
+                        res.end(JSON.stringify({ success: false, message: "HWID Mismatch. Locked to another device." }));
+                        return;
+                      }
+                    }
+                    
+                    console.log(` [MOCK] ✅ ${type.toUpperCase()} Success: ${user.username}`);
                     res.end(JSON.stringify({ 
                       success: true, 
                       message: "Logged in successfully!",
@@ -83,18 +157,19 @@ export default defineConfig({
                         lastlogin: Math.floor(Date.now() / 1000).toString(), 
                         expiry: Math.floor(new Date(user.expiresAt).getTime() / 1000).toString(),
                         subscriptions: [
-                          { subscription: "Default", key: "SYNAUTH-KEY", expiry: Math.floor(new Date(user.expiresAt).getTime() / 1000).toString(), timeleft: 86400 }
+                          { subscription: "Default", key: (user as any).key || "SYNAUTH-KEY", expiry: Math.floor(new Date(user.expiresAt).getTime() / 1000).toString(), timeleft: "86400" }
                         ]
                       } 
                     }));
                   } else {
-                    console.warn(` [MOCK] ${type.toUpperCase()} Failed: ${type === "login" ? username : key} (Invalid credentials)`);
+                    console.warn(` [MOCK] ❌ ${type.toUpperCase()} Failed: ${type === "login" ? username : key} (Invalid credentials)`);
                     res.end(JSON.stringify({ success: false, message: type === "login" ? "Invalid username or password." : "Invalid license key." }));
                   }
                 } else {
                   res.end(JSON.stringify({ success: false, message: "Type not supported in local mock." }));
                 }
               } catch (e) {
+                console.error(" [MOCK] Error:", e);
                 res.end(JSON.stringify({ success: false, message: "Server error in mock API." }));
               }
             });
@@ -115,7 +190,7 @@ export default defineConfig({
     port: 5173,
     host: "0.0.0.0",
     watch: {
-      ignored: ["**/users_mock.json"],
+      ignored: ["**/users_mock.json", "**/synauth_apps_backup.json"],
     },
   },
 });

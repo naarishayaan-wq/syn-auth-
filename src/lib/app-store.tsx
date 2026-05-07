@@ -61,24 +61,64 @@ type StoreCtx = {
   createLicense: (appId: string, appName: string) => void;
   selectedAppId: string;
   setSelectedAppId: React.Dispatch<React.SetStateAction<string>>;
+  isPremium: boolean;
+  setIsPremium: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const AppStoreContext = createContext<StoreCtx | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [apps, setApps] = useState<AppCredential[]>(SEEDED_APPS);
+  const [apps, setApps] = useState<AppCredential[]>(() => {
+    const saved = localStorage.getItem("synauth_apps");
+    return saved ? JSON.parse(saved) : SEEDED_APPS;
+  });
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>(() => {
     const saved = localStorage.getItem("synauth_managed_users");
     return saved ? JSON.parse(saved) : SEED_MANAGED;
   });
-  const [licenses, setLicenses] = useState<License[]>(MOCK_LICENSES);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(MOCK_AUDIT);
+  const [licenses, setLicenses] = useState<License[]>(() => {
+    const saved = localStorage.getItem("synauth_licenses");
+    return saved ? JSON.parse(saved) : MOCK_LICENSES;
+  });
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    const saved = localStorage.getItem("synauth_audit_logs");
+    return saved ? JSON.parse(saved) : MOCK_AUDIT;
+  });
   const [selectedAppId, setSelectedAppId] = useState(apps[0]?.id ?? "");
+  const [isPremium, setIsPremium] = useState<boolean>(() => {
+    // Resetting everyone to false for a clean start as requested
+    localStorage.removeItem("synauth_premium");
+    return false;
+  });
 
   // Persist to localStorage
   useEffect(() => {
+    localStorage.setItem("synauth_apps", JSON.stringify(apps));
+  }, [apps]);
+
+  useEffect(() => {
+    if (isPremium) {
+      localStorage.setItem("synauth_premium", "true");
+    } else {
+      localStorage.removeItem("synauth_premium");
+    }
+  }, [isPremium]);
+
+  useEffect(() => {
     localStorage.setItem("synauth_managed_users", JSON.stringify(managedUsers));
   }, [managedUsers]);
+
+  useEffect(() => {
+    localStorage.setItem("synauth_licenses", JSON.stringify(licenses));
+  }, [licenses]);
+
+  useEffect(() => {
+    localStorage.setItem("synauth_audit_logs", JSON.stringify(auditLogs));
+  }, [auditLogs]);
+
+  useEffect(() => {
+    localStorage.setItem("synauth_premium", isPremium.toString());
+  }, [isPremium]);
 
   // Sync users to local mock server for testing
   useEffect(() => {
@@ -87,18 +127,28 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         const formData = new URLSearchParams();
         formData.append("type", "sync");
         formData.append("users", JSON.stringify(managedUsers));
+        formData.append("apps", JSON.stringify(apps));
+        
+        // Use relative path without leading slash to respect base path if needed, 
+        // or just use /api/1.2/ which Vite middleware handles at the root.
         const response = await fetch("/api/1.2/", {
           method: "POST",
           body: formData,
         });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
         const data = await response.json();
-        console.log(" [MOCK] Sync Response:", data);
+        console.log(" [MOCK] Sync Success:", data.message);
       } catch (e) {
-        console.warn(" [MOCK] Sync failed. (This is normal if server is restarting)");
+        console.warn(" [MOCK] Sync failed. Make sure the local dev server is running.");
       }
     };
-    syncUsers();
-  }, [managedUsers]);
+    
+    // Debounce or delay slightly to ensure state is stable
+    const timer = setTimeout(syncUsers, 500);
+    return () => clearTimeout(timer);
+  }, [managedUsers, apps]);
 
   function addAuditLog(event: string, detail: string, type: AuditLog["type"]) {
     const newLog: AuditLog = {
@@ -139,7 +189,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppStoreContext.Provider value={{ 
       apps, setApps, managedUsers, setManagedUsers, licenses, setLicenses, auditLogs, addAuditLog,
-      refreshSecret, createLicense, selectedAppId, setSelectedAppId 
+      refreshSecret, createLicense, selectedAppId, setSelectedAppId, isPremium, setIsPremium 
     }}>
       {children}
     </AppStoreContext.Provider>

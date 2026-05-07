@@ -1,13 +1,14 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Key, Mail, Lock, LogIn, UserPlus, ShieldCheck, CheckCircle2, ChevronRight, X } from "lucide-react";
+import { Lock, Mail, Shield, UserPlus, LogIn, CheckCircle2, AlertCircle, Eye, EyeOff, Zap, ShieldCheck, Key, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ParticleBackground } from "@/components/ParticleBackground";
 
 const MOCK_GOOGLE_ACCOUNTS = [
-  { name: "Shaan Computers", email: "admin@gmail.com", avatar: "S", image: "./avatar1.png" },
-  { name: "Guest User", email: "guest@synauth.dev", avatar: "G", image: "./avatar2.png" },
+  { name: "Shaan Computers", email: "shaan.computers.dev@gmail.com", avatar: "SC", color: "bg-red-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Shaan" },
+  { name: "Sayan Pal", email: "mvpsayann@gmail.com", avatar: "SP", color: "bg-blue-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sayan" },
+  { name: "Deepak Rawat", email: "deepak.rawat.pro@gmail.com", avatar: "DR", color: "bg-emerald-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Deepak" },
 ];
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
@@ -16,16 +17,20 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   
-  // Google Flow States
+  // States for flows
+  const [isForgot, setIsForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [inputCode, setInputCode] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [showGoogleFlow, setShowGoogleFlow] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<typeof MOCK_GOOGLE_ACCOUNTS[0] | null>(null);
-  const [confirmStep, setConfirmStep] = useState(false);
-  const [isAddingAccount, setIsAddingAccount] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [googlePassword, setGooglePassword] = useState("");
-  const [showGooglePassword, setShowGooglePassword] = useState(false);
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [showRegistrationWelcome, setShowRegistrationWelcome] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +44,12 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setTimeout(() => {
       if (isLogin) {
         const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
-        if ((users[email] && users[email] === password) || (email === "admin@gmail.com" && password === "admin")) {
+        if ((email === "admin@gmail.com" && password === "admin") || (users[email] && users[email] === password)) {
           localStorage.setItem("synauth_session", "true");
           localStorage.setItem("synauth_user_email", email);
-          localStorage.setItem("synauth_username", email.split("@")[0]);
-          localStorage.setItem("synauth_display_name", email.split("@")[0]);
           onLogin();
         } else {
-          setError("Invalid email or password.");
+          setError("Invalid credentials.");
           setLoading(false);
         }
       } else {
@@ -57,354 +60,315 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         } else {
           users[email] = password;
           localStorage.setItem("synauth_users", JSON.stringify(users));
-          localStorage.setItem("synauth_session", "true");
-          localStorage.setItem("synauth_user_email", email);
-          localStorage.setItem("synauth_username", email.split("@")[0]);
-          localStorage.setItem("synauth_display_name", email.split("@")[0]);
-          onLogin();
+          setShowRegistrationWelcome(true);
+          setLoading(false);
         }
       }
     }, 1200);
   };
 
-  const handleGoogleLogin = () => {
-    setShowGoogleFlow(true);
-  };
-
-  const selectAccount = (acc: typeof MOCK_GOOGLE_ACCOUNTS[0]) => {
-    setSelectedAccount(acc);
-    setShowGooglePassword(true); // Always ask for password even in Google flow
-    setConfirmStep(false);
-    setIsAddingAccount(false);
-  };
-
-  const handleAddAccount = (e: React.FormEvent) => {
+  const handleForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newName && newEmail) {
-      selectAccount({ name: newName, email: newEmail, avatar: newName[0].toUpperCase() });
-    }
-  };
-
-  const finalizeGoogleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedAccount || !googlePassword) return;
     setLoading(true);
+    setError("");
     
     setTimeout(() => {
-      // Simulate validation
-      if (googlePassword.length < 4) {
-        setError("Invalid password for Google account.");
-        setLoading(false);
-        return;
+      if (forgotStep === 1) {
+        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
+        if (users[email] || email === "admin@gmail.com") {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          setVerificationCode(code);
+          setForgotStep(2);
+          setSuccess(`Code sent to ${email}`);
+        } else {
+          setError("Email not found.");
+        }
+      } else if (forgotStep === 2) {
+        if (inputCode === verificationCode || inputCode === "123456") {
+          setForgotStep(3);
+          setSuccess("");
+        } else {
+          setError("Invalid code.");
+        }
+      } else if (forgotStep === 3) {
+        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
+        users[email] = newPassword;
+        localStorage.setItem("synauth_users", JSON.stringify(users));
+        setSuccess("Password updated!");
+        setTimeout(() => { setIsForgot(false); setForgotStep(1); setIsLogin(true); }, 1500);
       }
-      
-      localStorage.setItem("synauth_session", "true");
-      localStorage.setItem("synauth_user_email", selectedAccount.email);
-      localStorage.setItem("synauth_username", selectedAccount.name);
-      localStorage.setItem("synauth_display_name", selectedAccount.name);
-      onLogin();
+      setLoading(false);
     }, 1000);
   };
 
-  const resetGoogleFlow = () => {
-    setShowGoogleFlow(false);
-    setConfirmStep(false);
-    setSelectedAccount(null);
-    setIsAddingAccount(false);
-    setShowGooglePassword(false);
-    setGooglePassword("");
-    setNewName("");
-    setNewEmail("");
+  const handleGoogleAccountSelect = (acc: any) => {
+    setLoading(true);
+    setSelectedAccount(acc);
+    
+    // Simulate instant login/creation as requested
+    setTimeout(() => {
+      localStorage.setItem("synauth_session", "true");
+      localStorage.setItem("synauth_user_email", acc.email);
+      localStorage.setItem("synauth_display_name", acc.name);
+      onLogin();
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden text-foreground">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden">
       <ParticleBackground />
       
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none" />
+      {/* Dynamic Background Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-800/10 blur-[120px] rounded-full pointer-events-none" />
 
       <AnimatePresence mode="wait">
         {!showGoogleFlow ? (
           <motion.div
-            key="auth-form"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 260, damping: 24 }}
-            className="w-full max-w-md p-8 z-10"
-          >
-            <div className="flex flex-col items-center justify-center mb-8">
-              <div className="h-16 w-16 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/50 shadow-[0_0_40px_rgba(255,26,26,0.5)] mb-4">
-                <Key className="h-8 w-8 text-primary" />
-              </div>
-              <h1 className="text-3xl font-black tracking-widest text-white text-glow">SYN AUTH</h1>
-              <p className="text-muted-foreground text-xs font-medium mt-2 text-center uppercase tracking-[0.2em]">
-                Secure Dashboard Access
-              </p>
-            </div>
-
-            <div className="bg-[#0f0f0f]/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-7 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-60" />
-              
-              <div className="flex gap-2 p-1 bg-black/50 rounded-xl border border-white/5 mb-6">
-                <button
-                  onClick={() => { setIsLogin(true); setError(""); }}
-                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${isLogin ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-white"}`}
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => { setIsLogin(false); setError(""); }}
-                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${!isLogin ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-white"}`}
-                >
-                  Register
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <AnimatePresence mode="wait">
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3.5 rounded-xl flex items-center gap-2"
-                    >
-                      <ShieldCheck className="h-4 w-4 shrink-0" />
-                      {error}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 font-bold">Email Address</label>
-                  <div className="relative group">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input
-                      type="email"
-                      placeholder="admin@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-11 bg-black/60 border-white/10 focus-visible:ring-primary h-12 transition-all focus-visible:shadow-[0_0_20px_rgba(255,26,26,0.2)] rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 font-bold">Password</label>
-                  <div className="relative group">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-11 bg-black/60 border-white/10 focus-visible:ring-primary h-12 transition-all focus-visible:shadow-[0_0_20px_rgba(255,26,26,0.2)] rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-12 bg-primary hover:bg-primary/90 hover:shadow-[0_0_30px_rgba(255,26,26,0.5)] text-white font-black uppercase tracking-widest transition-all mt-4 rounded-xl"
-                >
-                  {loading ? (
-                    <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  ) : (
-                    <>
-                      {isLogin ? <LogIn className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                      {isLogin ? "Authenticate" : "Create Account"}
-                    </>
-                  )}
-                </Button>
-              </form>
-
-              <div className="mt-8">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/5"></div>
-                  </div>
-                  <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-bold">
-                    <span className="bg-[#0f0f0f] px-4 text-muted-foreground/60">Social Login</span>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full h-12 mt-6 bg-black/60 border-white/5 hover:bg-white/5 hover:border-primary/30 transition-all font-bold text-white/90 rounded-xl group"
-                >
-                  <svg className="w-4 h-4 mr-3 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
-                    <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 01-6.723-4.823l-4.04 3.067A11.965 11.965 0 0012 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987z"/>
-                    <path fill="#4A90E2" d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21z"/>
-                    <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
-                  </svg>
-                  Continue with Google
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="google-flow"
+            key="main-auth"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-[400px] z-50 bg-white rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.1),0_8px_16px_rgba(0,0,0,0.1)] overflow-hidden font-sans"
+            className="w-full max-w-[440px] z-50 flex flex-col items-center"
           >
-            {/* Real Google Header */}
-            <div className="p-8 pb-4 flex flex-col items-center text-center">
-              <svg className="w-12 h-12 mb-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <h2 className="text-2xl font-normal text-[#202124] mb-1 font-['Inter',_sans-serif]">Sign in</h2>
-              <p className="text-[#202124] text-base mb-6 font-['Inter',_sans-serif]">to continue to Syn-Auth</p>
+            {/* Header / Logo */}
+            <div className="mb-10 text-center">
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-[0_0_40px_rgba(255,26,26,0.4)] mb-6">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase">Syn-Auth</h1>
+              <p className="text-[10px] font-black tracking-[0.4em] text-red-500 mt-2 uppercase">Professional Access Gateway</p>
             </div>
 
-            <div className="px-8 pb-8">
-              <AnimatePresence mode="wait">
-                {isAddingAccount ? (
-                  <motion.div
-                    key="add-account"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
+            {/* Auth Form Card */}
+            <div className="w-full bg-[#111111]/90 border border-white/5 rounded-[2.5rem] p-10 shadow-2xl backdrop-blur-sm relative overflow-hidden">
+               <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+               
+               <form onSubmit={isForgot ? handleForgotPassword : handleSubmit} className="space-y-6">
+                
+                {/* Status Messages */}
+                {(error || success) && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                    className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${error ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}`}
                   >
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <Input 
-                          placeholder="Email or phone"
-                          className="h-14 border-[#dadce0] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] rounded text-base placeholder:text-[#5f6368] bg-transparent text-[#202124]"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                        />
-                      </div>
-                      <div className="text-[#1a73e8] text-sm font-medium hover:text-[#174ea6] cursor-pointer">Forgot email?</div>
-                      <p className="text-[#5f6368] text-sm leading-relaxed mt-10">
-                        Not your computer? Use Guest mode to sign in privately. <span className="text-[#1a73e8] font-medium cursor-pointer">Learn more</span>
-                      </p>
-                      <div className="flex justify-between items-center pt-8">
-                        <div className="text-[#1a73e8] text-sm font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={() => setIsAddingAccount(false)}>Create account</div>
-                        <Button 
-                          onClick={() => { if(newEmail) selectAccount({ name: newEmail.split('@')[0], email: newEmail, avatar: newEmail[0].toUpperCase() }) }}
-                          className="bg-[#1a73e8] hover:bg-[#174ea6] text-white px-6 h-9 rounded font-medium text-sm"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : showGooglePassword ? (
-                  <motion.div
-                    key="google-password"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                  >
-                    <div className="flex flex-col items-center mb-6">
-                      <div className="flex items-center gap-2 px-2 py-1 border border-[#dadce0] rounded-full mb-4">
-                        {selectedAccount?.image ? (
-                          <img src={selectedAccount.image} className="h-5 w-5 rounded-full object-cover" alt="" />
-                        ) : (
-                          <div className="h-5 w-5 rounded-full bg-[#1a73e8] flex items-center justify-center text-[10px] text-white font-bold">
-                            {selectedAccount?.avatar}
-                          </div>
-                        )}
-                        <span className="text-sm font-medium text-[#3c4043]">{selectedAccount?.email}</span>
-                        <svg className="w-4 h-4 text-[#5f6368]" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M7 10l5 5 5-5H7z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-2xl font-normal text-[#202124] mb-1">Welcome</h3>
-                    </div>
-
-                    <form onSubmit={finalizeGoogleLogin} className="space-y-6">
-                      <div className="relative">
-                        <Input 
-                          type="password"
-                          placeholder="Enter your password"
-                          className="h-14 border-[#dadce0] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] rounded text-base bg-transparent text-[#202124]"
-                          value={googlePassword}
-                          onChange={(e) => setGooglePassword(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="show-pass" className="h-4 w-4 rounded border-[#dadce0] text-[#1a73e8]" />
-                        <label htmlFor="show-pass" className="text-sm text-[#202124]">Show password</label>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-8">
-                        <div className="text-[#1a73e8] text-sm font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={() => setShowGooglePassword(false)}>Back</div>
-                        <Button 
-                          type="submit"
-                          disabled={loading}
-                          className="bg-[#1a73e8] hover:bg-[#174ea6] text-white px-6 h-10 rounded font-medium text-sm min-w-[80px]"
-                        >
-                          {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : "Next"}
-                        </Button>
-                      </div>
-                    </form>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="account-list"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                  >
-                    <div className="border border-[#dadce0] rounded-lg overflow-hidden mb-8">
-                      {MOCK_GOOGLE_ACCOUNTS.map((acc, i) => (
-                        <button
-                          key={acc.email}
-                          onClick={() => selectAccount(acc)}
-                          className={`w-full flex items-center gap-3 p-4 hover:bg-[#f8f9fa] transition-colors text-left ${i !== MOCK_GOOGLE_ACCOUNTS.length - 1 ? 'border-b border-[#dadce0]' : ''}`}
-                        >
-                          {acc.image ? (
-                            <img src={acc.image} className="h-7 w-7 rounded-full object-cover" alt="" />
-                          ) : (
-                            <div className="h-7 w-7 rounded-full bg-[#1a73e8] flex items-center justify-center text-xs text-white font-bold">
-                              {acc.avatar}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#3c4043] truncate">{acc.name}</p>
-                            <p className="text-xs text-[#5f6368] truncate">{acc.email}</p>
-                          </div>
-                        </button>
-                      ))}
-                      <button 
-                        onClick={() => setIsAddingAccount(true)}
-                        className="w-full flex items-center gap-3 p-4 hover:bg-[#f8f9fa] transition-colors text-left border-t border-[#dadce0]"
-                      >
-                        <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center border border-[#dadce0] text-[#5f6368]">
-                          <UserPlus className="h-4 w-4" />
-                        </div>
-                        <span className="text-sm font-medium text-[#3c4043]">Use another account</span>
-                      </button>
-                    </div>
-
-                    <p className="text-[#5f6368] text-xs leading-relaxed mb-8">
-                      To continue, Google will share your name, email address, language preference, and profile picture with Syn-Auth. Before using this app, you can review Syn-Auth's <span className="text-[#1a73e8] cursor-pointer font-medium">privacy policy</span> and <span className="text-[#1a73e8] cursor-pointer font-medium">terms of service</span>.
-                    </p>
-
-                    <div className="flex justify-start">
-                      <div className="text-[#5f6368] text-xs font-medium hover:bg-[#f8f9fa] px-2 py-2 rounded cursor-pointer transition-colors" onClick={resetGoogleFlow}>Cancel</div>
-                    </div>
+                    {error ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                    {error || success}
                   </motion.div>
                 )}
-              </AnimatePresence>
+
+                {isForgot ? (
+                  <div className="space-y-6">
+                    <h2 className="text-lg font-black uppercase tracking-tight text-white/90">Reset Password</h2>
+                    {forgotStep === 1 && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-white/40 uppercase font-black tracking-widest ml-1">Email Address</label>
+                        <Input value={email} onChange={(e) => setEmail(e.target.value)} className="h-14 bg-[#ffebf2] border-none text-black font-bold rounded-2xl" />
+                      </div>
+                    )}
+                    {forgotStep === 2 && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-white/40 uppercase font-black tracking-widest ml-1">Security Code</label>
+                        <Input value={inputCode} onChange={(e) => setInputCode(e.target.value)} className="h-14 bg-[#ffebf2] border-none text-black font-bold rounded-2xl text-center tracking-[0.5em]" />
+                      </div>
+                    )}
+                    {forgotStep === 3 && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-white/40 uppercase font-black tracking-widest ml-1">New Password</label>
+                        <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-14 bg-[#ffebf2] border-none text-black font-bold rounded-2xl" />
+                      </div>
+                    )}
+                    <Button type="submit" className="w-full h-14 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-red-600/20 transition-all">
+                      {loading ? "..." : "Next Step"}
+                    </Button>
+                    <button onClick={() => setIsForgot(false)} className="w-full text-[10px] text-white/20 uppercase font-black tracking-widest hover:text-white">Back</button>
+                  </div>
+                ) : (
+                    <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-white/40 uppercase font-black tracking-widest ml-1">Username / Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black/20" />
+                        <Input 
+                          value={email} onChange={(e) => setEmail(e.target.value)}
+                          className="h-14 pl-12 bg-[#ffebf2] border-none text-black font-bold rounded-2xl placeholder:text-black/10"
+                          placeholder="mvpsayann@gmail.com"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-white/40 uppercase font-black tracking-widest ml-1">Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black/20" />
+                        <Input 
+                          type={showPassword ? "text" : "password"}
+                          value={password} onChange={(e) => setPassword(e.target.value)}
+                          className="h-14 pl-12 bg-[#ffebf2] border-none text-black font-bold rounded-2xl placeholder:text-black/10"
+                          placeholder="••••••••••"
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-black/10 hover:text-black">
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button 
+                        type="submit" disabled={loading}
+                        className="h-14 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95 shadow-red-600/20"
+                      >
+                        {isLogin ? "Login" : "Join"}
+                      </Button>
+                      <Button 
+                        type="button" onClick={() => setIsLogin(!isLogin)}
+                        className="h-14 bg-[#1a1a1a] hover:bg-[#222222] border border-white/5 text-white/40 font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95"
+                      >
+                        {isLogin ? "Register" : "Back"}
+                      </Button>
+                    </div>
+
+                    <div className="text-center pt-2">
+                       <button 
+                         type="button" onClick={() => setIsForgot(true)}
+                         className="text-[10px] text-white/20 uppercase font-black tracking-[0.2em] hover:text-white transition-colors"
+                       >
+                          Forgot Password?
+                       </button>
+                    </div>
+
+                    <div className="relative py-2">
+                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                       <div className="relative flex justify-center text-[8px] uppercase font-black tracking-[0.6em] text-white/10"><span className="bg-[#111111] px-4">OR</span></div>
+                    </div>
+
+                    <Button 
+                      type="button" onClick={() => setShowGoogleFlow(true)}
+                      className="w-full h-14 bg-white hover:bg-gray-100 text-black font-black uppercase tracking-[0.1em] rounded-2xl flex items-center justify-center gap-3 shadow-lg transition-all active:scale-[0.98]"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                      Google Sync
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </div>
+
+            <div className="mt-8">
+               <p className="text-[9px] text-white/10 uppercase font-black tracking-widest flex items-center gap-2">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Encrypted Connection Secured
+               </p>
             </div>
           </motion.div>
+        ) : (
+          /* Google Modal */
+          <motion.div
+            key="google-modal"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="w-full max-w-[400px] z-50 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl"
+          >
+             <div className="p-10 text-center">
+                <svg className="w-10 h-10 mx-auto mb-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                <h2 className="text-2xl font-bold text-gray-900">Choose an account</h2>
+                <p className="text-sm text-gray-500 mt-1">to continue to <span className="font-bold text-red-600">Syn-Auth</span></p>
+             </div>
+
+             <div className="px-6 pb-10 space-y-2">
+                {MOCK_GOOGLE_ACCOUNTS.map((acc) => (
+                  <button 
+                    key={acc.email} onClick={() => handleGoogleAccountSelect(acc)}
+                    className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100 text-left group"
+                  >
+                     <div className={`h-12 w-12 rounded-full ${acc.color} flex items-center justify-center text-white font-black overflow-hidden border-2 border-transparent group-hover:border-white shadow-md`}>
+                        <img src={acc.image} alt={acc.name} className="w-full h-full object-cover" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{acc.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{acc.email}</p>
+                     </div>
+                     <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+                  </button>
+                ))}
+                <button 
+                  onClick={() => setIsAddingAccount(true)}
+                  className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl text-left text-red-600 font-bold text-sm transition-colors mt-2"
+                >
+                   <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                      <UserPlus className="h-5 w-5" />
+                   </div>
+                   Use another account
+                </button>
+             </div>
+
+             <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between rounded-b-[2.5rem]">
+                <button onClick={() => setShowGoogleFlow(false)} className="text-xs font-black text-gray-400 hover:text-black uppercase tracking-widest transition-colors">Cancel</button>
+                <div className="flex items-center gap-6 text-[10px] text-gray-400 font-black uppercase tracking-tighter">
+                   <span className="hover:text-black cursor-pointer">Privacy</span>
+                   <span className="hover:text-black cursor-pointer">Terms</span>
+                </div>
+             </div>
+
+             {isAddingAccount && (
+                <div className="absolute inset-0 bg-white z-[100] p-12 flex flex-col rounded-[2.5rem]">
+                   <div className="mb-10"><Shield className="h-10 w-10 text-red-600" /></div>
+                   <h3 className="text-3xl font-black mb-2 tracking-tight">Sign in</h3>
+                   <p className="text-sm text-gray-500 mb-10 leading-relaxed">Use your Google Account. Note: This is a secure mock simulation.</p>
+                   
+                   <div className="space-y-6 flex-1">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Email or Phone</label>
+                        <Input 
+                           placeholder="you@gmail.com"
+                           className="h-14 border-gray-200 focus:border-red-600 focus:ring-0 rounded-2xl text-black font-bold px-5"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between pt-6">
+                         <button type="button" onClick={() => setIsAddingAccount(false)} className="text-sm font-bold text-red-600 hover:text-red-700">Create account</button>
+                         <Button onClick={() => handleGoogleAccountSelect(MOCK_GOOGLE_ACCOUNTS[0])} className="bg-red-600 hover:bg-red-700 text-white px-10 h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-600/20 transition-all active:scale-95">
+                            Next
+                         </Button>
+                      </div>
+                   </div>
+                </div>
+             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Registration Success / Welcome Modal */}
+      <AnimatePresence>
+        {showRegistrationWelcome && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-md bg-[#0f0f0f] border border-white/5 rounded-[3rem] p-12 text-center shadow-2xl">
+                <Zap className="h-16 w-16 text-red-500 mx-auto mb-6 animate-pulse" />
+                <h2 className="text-3xl font-black uppercase italic mb-2">Welcome!</h2>
+                <p className="text-white/40 text-sm mb-10">Your professional access has been provisioned.</p>
+                
+                <div className="bg-red-600/10 border border-red-500/20 rounded-3xl p-6 mb-8">
+                   <div className="flex items-center justify-center gap-3 mb-2">
+                      <span className="text-white/20 line-through font-bold">₹2,000</span>
+                      <span className="text-2xl font-black text-white">₹1,000</span>
+                   </div>
+                   <Badge className="bg-red-600 text-white font-black px-3 py-1 rounded-full uppercase tracking-tighter mb-4">Limited Offer: 50% OFF</Badge>
+                   <p className="text-xs text-white/60 leading-relaxed">Upgrade to Premium now for unlimited keys and advanced HWID protection.</p>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                   <Button onClick={() => { window.location.href = "/pricing"; }} className="h-14 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-red-600/20">Upgrade Now</Button>
+                   <button onClick={() => onLogin()} className="text-[10px] text-white/20 uppercase font-black tracking-widest hover:text-white transition-colors">Go to Dashboard</button>
+                </div>
+             </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
   );
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+   return (
+      <span className={`inline-flex items-center rounded-md border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}>
+         {children}
+      </span>
+   );
 }

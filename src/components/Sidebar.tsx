@@ -10,10 +10,13 @@ import {
   X,
   LogOut,
   Shield,
+  Zap,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/lib/app-store";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -23,6 +26,7 @@ const navItems = [
   { href: "/tokens", label: "Tokens", icon: Code2 },
   { href: "/integration", label: "Integration", icon: Terminal },
   { href: "/audit-log", label: "Audit Log", icon: Shield },
+  { href: "/pricing", label: "Upgrade", icon: Crown },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -35,101 +39,127 @@ export function Sidebar({
 }) {
   const [location] = useLocation();
 
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border w-64 p-4 z-50 relative">
-      <div className="flex items-center justify-between mb-8 px-2">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center border border-primary/50 shadow-[0_0_15px_rgba(255,26,26,0.3)]">
-            <Key className="h-4 w-4 text-primary" />
-          </div>
-          <span className="text-xl font-bold tracking-wider text-white text-glow">SYN AUTH</span>
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden text-muted-foreground"
-          onClick={() => setMobileOpen(false)}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
+  const SidebarContent = () => {
+    const { isPremium } = useAppStore();
+    
+    return (
+      <div className="flex h-full flex-col bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border w-64 p-4 z-50 relative">
+        <div className="flex items-center justify-between mb-8 px-2">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center border border-primary/50 shadow-[0_0_15px_rgba(255,26,26,0.3)]">
+              <Key className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-xl font-bold tracking-wider text-white text-glow">SYN AUTH</span>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-muted-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
 
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          const isIntegration = item.href === "/integration";
-          return (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200 cursor-pointer relative group",
-                  isActive
-                    ? "bg-primary/10 text-primary text-glow font-medium"
-                    : "text-sidebar-foreground hover:bg-white/5 hover:text-white",
-                  isIntegration && !isActive && "border border-white/5"
-                )}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeNav"
-                    className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md shadow-[0_0_10px_rgba(255,26,26,0.8)]"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  />
-                )}
-                <item.icon
+        <nav className="flex-1 space-y-1">
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            const isIntegration = item.href === "/integration";
+            const isUpgrade = item.href === "/pricing";
+
+            if (isUpgrade && isPremium) return null;
+
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
                   className={cn(
-                    "h-5 w-5",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200 cursor-pointer relative group",
                     isActive
-                      ? "text-primary"
-                      : "text-muted-foreground group-hover:text-white transition-colors"
+                      ? "bg-primary/10 text-primary text-glow font-medium"
+                      : "text-sidebar-foreground hover:bg-white/5 hover:text-white",
+                    isIntegration && !isActive && "border border-white/5",
+                    isUpgrade && "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
                   )}
-                />
-                <span>{item.label}</span>
-                {isIntegration && (
-                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">
-                    SDK
-                  </span>
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md shadow-[0_0_10px_rgba(255,26,26,0.8)]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    />
+                  )}
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5",
+                      isActive
+                        ? "text-primary"
+                        : isUpgrade 
+                          ? "text-amber-500"
+                          : "text-muted-foreground group-hover:text-white transition-colors"
+                    )}
+                  />
+                  <span>{item.label}</span>
+                  {isIntegration && (
+                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">
+                      SDK
+                    </span>
+                  )}
+                  {isUpgrade && (
+                    <Zap className="ml-auto h-3 w-3 text-amber-500 animate-pulse" />
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto pt-4 border-t border-white/5 px-2 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-sm font-bold shadow-[0_0_10px_rgba(255,26,26,0.1)] text-primary shrink-0">
+                  {(localStorage.getItem("synauth_display_name") || localStorage.getItem("synauth_user_email") || "G").substring(0, 1).toUpperCase()}
+                </div>
+                {isPremium && (
+                  <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border-2 border-[#0f0f0f] shadow-lg">
+                    <Zap className="h-2 w-2 text-white fill-white" />
+                  </div>
                 )}
               </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-auto pt-4 border-t border-white/5 px-2 pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-sm font-bold shadow-[0_0_10px_rgba(255,26,26,0.1)] text-primary shrink-0">
-              {(localStorage.getItem("synauth_display_name") || localStorage.getItem("synauth_user_email") || "G").substring(0, 1).toUpperCase()}
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-white truncate">
+                    {localStorage.getItem("synauth_display_name") || localStorage.getItem("synauth_username") || "Ghost Dev"}
+                  </span>
+                  {isPremium && (
+                    <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1 rounded-sm font-black uppercase tracking-tighter border border-amber-500/20">PRO</span>
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {localStorage.getItem("synauth_user_email") || "admin@synauth.dev"}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-white truncate">
-                {localStorage.getItem("synauth_display_name") || localStorage.getItem("synauth_username") || "Ghost Dev"}
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate">
-                {localStorage.getItem("synauth_user_email") || "admin@synauth.dev"}
-              </span>
-            </div>
+            <button 
+              onClick={() => { 
+                localStorage.removeItem("synauth_session"); 
+                localStorage.removeItem("synauth_user_email");
+                localStorage.removeItem("synauth_username");
+                localStorage.removeItem("synauth_display_name");
+                window.location.reload(); 
+              }}
+              className="p-2.5 rounded-xl text-red-400/80 hover:bg-red-500/20 hover:text-red-400 transition-all bg-red-500/10 shrink-0 border border-red-500/20 shadow-[0_0_15px_rgba(255,26,26,0.1)]"
+              title="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <button 
-            onClick={() => { 
-              localStorage.removeItem("synauth_session"); 
-              localStorage.removeItem("synauth_user_email");
-              localStorage.removeItem("synauth_username");
-              localStorage.removeItem("synauth_display_name");
-              window.location.reload(); 
-            }}
-            className="p-2.5 rounded-xl text-red-400/80 hover:bg-red-500/20 hover:text-red-400 transition-all bg-red-500/10 shrink-0 border border-red-500/20 shadow-[0_0_15px_rgba(255,26,26,0.1)]"
-            title="Log out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>

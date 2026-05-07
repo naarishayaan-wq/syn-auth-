@@ -1,24 +1,13 @@
 [
   {
-    "id": "mu_1778143414671",
-    "username": "11",
-    "password": "11",
-    "key": "",
-    "expiresAt": "2026-05-14T08:43:34.671Z",
-    "hwidLock": true,
-    "hwid": null,
-    "status": "active",
-    "createdAt": "2026-05-07T08:43:34.671Z"
-  },
-  {
-    "id": "mu_1778143299974",
-    "username": "1",
+    "id": "mu_1778155344883",
+    "username": "syn",
     "password": "1",
-    "key": "",
-    "expiresAt": "2026-05-14T08:41:39.974Z",
-    "hwidLock": true,
+    "key": "SYNAUTH-LORH-10XJ-JKL1",
+    "expiresAt": "2026-05-14T12:02:24.883Z",
+    "hwidLock": false,
     "hwid": null,
     "status": "active",
-    "createdAt": "2026-05-07T08:41:39.974Z"
+    "createdAt": "2026-05-07T12:02:24.883Z"
   }
 ]
