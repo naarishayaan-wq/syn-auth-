@@ -8,6 +8,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="text/javascript">
+      // Clean up legacy SPA redirect mess (~and~)
+      (function() {
+        var l = window.location;
+        if (l.search.indexOf('~and~') !== -1 || l.search.indexOf('?/') !== -1) {
+          var cleanSearch = l.search.slice(1)
+            .replace(/\?\//g, '')
+            .replace(/~and~/g, '&')
+            .replace(/&&+/g, '&')
+            .replace(/^&|&$/g, '');
+          
+          var newUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + l.pathname;
+          if (cleanSearch) newUrl += '?' + cleanSearch;
+          newUrl += l.hash;
+          
+          window.history.replaceState(null, null, newUrl);
+        }
+      })();
+    </script>
 
   </head>
   <body>
