@@ -25,6 +25,13 @@
           
           window.history.replaceState(null, null, newUrl);
         }
+        
+        // Mandatory data wipe for v2 release
+        if (!localStorage.getItem("synauth_force_wipe_v3")) {
+          localStorage.clear();
+          localStorage.setItem("synauth_force_wipe_v3", "true");
+          window.location.reload();
+        }
       })();
     </script>
 
