@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Mail, Shield, UserPlus, LogIn, CheckCircle2, AlertCircle, Eye, EyeOff, Zap, ShieldCheck, Key, ChevronRight } from "lucide-react";
+import { Lock, Mail, Shield, User, UserPlus, LogIn, CheckCircle2, AlertCircle, Eye, EyeOff, Zap, ShieldCheck, Key, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ParticleBackground } from "@/components/ParticleBackground";
 
 const MOCK_GOOGLE_ACCOUNTS = [
-  { name: "Shaan Computers", email: "shaan.computers.dev@gmail.com", avatar: "SC", color: "bg-red-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Shaan" },
-  { name: "Sayan Pal", email: "mvpsayann@gmail.com", avatar: "SP", color: "bg-blue-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sayan" },
-  { name: "Deepak Rawat", email: "deepak.rawat.pro@gmail.com", avatar: "DR", color: "bg-emerald-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Deepak" },
+  { name: "MVP SAYANN", email: "mvpsayann@gmail.com", avatar: "MS", color: "bg-purple-600", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=MVP" },
+  { name: "Shayaan Live", email: "liveshayaan@gmail.com", avatar: "SL", color: "bg-cyan-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Live" },
+  { name: "Shayaan naari", email: "naarishayaan@gmail.com", avatar: "SN", color: "bg-emerald-500", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Naari" },
 ];
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
