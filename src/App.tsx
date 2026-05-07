@@ -67,7 +67,14 @@ function App() {
   }, []);
 
   if (isAuthenticated === null) {
-    return null; // or a loading spinner
+    return (
+      <div className="h-screen w-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_15px_rgba(255,26,26,0.2)]" />
+          <p className="text-muted-foreground text-sm font-medium animate-pulse">Initializing SynAuth...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
