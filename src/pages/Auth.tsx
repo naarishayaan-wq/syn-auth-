@@ -105,21 +105,23 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const handleGoogleAccountSelect = (acc: any) => {
     setSelectedAccount(acc);
     setShowGoogleContinue(true);
+    setLoading(false); // Ensure we're ready for password entry
   };
 
   const handleGoogleContinue = () => {
+    if (!googlePassword) return;
     setLoading(true);
     const googleName = selectedAccount.name;
     const synAuthName = `${googleName}.SYN AUTH`;
     
-    // Simulate instant login/creation as requested
+    // Simulate high-security verification
     setTimeout(() => {
       localStorage.setItem("synauth_session", "true");
       localStorage.setItem("synauth_user_email", selectedAccount.email);
       localStorage.setItem("synauth_display_name", synAuthName);
       localStorage.setItem("synauth_username", synAuthName);
       onLogin();
-    }, 1200);
+    }, 2000);
   };
 
   return (
@@ -342,38 +344,58 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
              {showGoogleContinue && selectedAccount && (
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                  className="absolute inset-0 bg-white z-[110] flex flex-col rounded-[2.5rem] overflow-hidden"
+                  className="absolute inset-0 bg-white z-[110] flex flex-col rounded-[2.5rem] overflow-hidden shadow-2xl"
                 >
-                   <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                      <div className={`h-24 w-24 rounded-full ${selectedAccount.color} flex items-center justify-center text-white text-3xl font-black overflow-hidden border-4 border-gray-50 shadow-2xl mb-6`}>
+                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                      <div className={`h-24 w-24 rounded-full ${selectedAccount.color} flex items-center justify-center text-white text-3xl font-black overflow-hidden border-4 border-gray-50 shadow-xl mb-6`}>
                          <img src={selectedAccount.image} alt={selectedAccount.name} className="w-full h-full object-cover" />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Welcome, {selectedAccount.name.split(' ')[0]}</h3>
-                      <p className="text-sm text-gray-500 mb-8">{selectedAccount.email}</p>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Hi, {selectedAccount.name.split(' ')[0]}</h3>
+                      <p className="text-sm text-gray-500 mb-10 flex items-center gap-2 justify-center">
+                        <div className="h-5 w-5 rounded-full border border-gray-200 flex items-center justify-center"><User className="h-3 w-3" /></div>
+                        {selectedAccount.email}
+                      </p>
                       
-                      <div className="w-full space-y-4">
-                         <Button 
-                           onClick={handleGoogleContinue} 
-                           disabled={loading}
-                           className="w-full h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-600/20 transition-all active:scale-95"
-                         >
-                            {loading ? (
-                              <div className="flex items-center gap-2">
-                                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Synchronizing...
-                              </div>
-                            ) : "Continue"}
-                         </Button>
-                         <button 
-                           onClick={() => setShowGoogleContinue(false)}
-                           className="text-xs font-black text-gray-400 hover:text-black uppercase tracking-widest transition-colors"
-                         >
-                            Use a different account
-                         </button>
+                      <div className="w-full space-y-6 text-left">
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 ml-1">Enter your password</label>
+                            <Input 
+                              type="password"
+                              placeholder="Password"
+                              value={googlePassword}
+                              onChange={(e) => setGooglePassword(e.target.value)}
+                              className="h-14 border-gray-200 focus:border-red-600 focus:ring-0 rounded-2xl text-black font-bold px-5"
+                            />
+                            <div className="flex items-center gap-2 mt-2 px-1">
+                               <input type="checkbox" id="show-pass" className="rounded border-gray-300 text-red-600 focus:ring-red-600" />
+                               <label htmlFor="show-pass" className="text-xs text-gray-500 font-medium cursor-pointer">Show password</label>
+                            </div>
+                         </div>
+
+                         <div className="flex items-center justify-between pt-4">
+                            <button 
+                              onClick={() => setShowGoogleContinue(false)}
+                              className="text-sm font-bold text-red-600 hover:text-red-700"
+                            >
+                               Forgot password?
+                            </button>
+                            <Button 
+                              onClick={handleGoogleContinue} 
+                              disabled={loading || !googlePassword}
+                              className="h-14 bg-red-600 hover:bg-red-700 text-white px-10 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:scale-100"
+                            >
+                               {loading ? (
+                                 <div className="flex items-center gap-2">
+                                   <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                   Verifying...
+                                 </div>
+                               ) : "Next"}
+                            </Button>
+                         </div>
                       </div>
                    </div>
-                   <div className="p-8 bg-gray-50 text-[10px] text-gray-400 text-center border-t border-gray-100">
-                      To continue, Google will share your name, email address, language preference, and profile picture with <span className="font-bold text-red-600 uppercase">SYN AUTH</span>.
+                   <div className="p-8 bg-gray-50 text-[10px] text-gray-400 text-center border-t border-gray-100 leading-relaxed">
+                      To continue, Google will share your profile info with <span className="font-bold text-red-600 uppercase">SYN AUTH</span>. Secure verification active.
                    </div>
                 </motion.div>
              )}
