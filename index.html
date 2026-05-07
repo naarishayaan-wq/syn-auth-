@@ -4,13 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>SYN AUTH</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="text/javascript">
+      // Clean up legacy SPA redirect mess (~and~)
+      (function() {
+        var l = window.location;
+        if (l.search.indexOf('~and~') !== -1 || l.search.indexOf('?/') !== -1) {
+          var cleanSearch = l.search.slice(1)
+            .replace(/\?\//g, '')
+            .replace(/~and~/g, '&')
+            .replace(/&&+/g, '&')
+            .replace(/^&|&$/g, '');
+          
+          var newUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + l.pathname;
+          if (cleanSearch) newUrl += '?' + cleanSearch;
+          newUrl += l.hash;
+          
+          window.history.replaceState(null, null, newUrl);
+        }
+      })();
+    </script>
 
-    <script type="module" crossorigin src="/assets/index-7ZO5DoaU.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D2dC9LBp.css">
+    <script type="module" crossorigin src="/assets/index-DaYOgHmW.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BXdWOB59.css">
   </head>
   <body>
     <div id="root"></div>
