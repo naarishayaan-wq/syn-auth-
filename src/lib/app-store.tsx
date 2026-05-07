@@ -28,23 +28,9 @@ export type AppCredential = Application & {
 
 // ── seed data ────────────────────────────────────────────────────────────────
 
-const SEEDED_APPS: AppCredential[] = MOCK_APPS.map((a) => ({
-  ...a,
-  ownerId: genOwnerId(),
-  appSecret: genSecret(),
-  version: "1.0",
-}));
+const SEEDED_APPS: AppCredential[] = [];
 
-export const SEED_MANAGED: ManagedUser[] = MOCK_USERS.map((u, i) => ({
-  id: `mu_${u.id}`,
-  username: u.username,
-  key: `SYNAUTH-${u.id.toUpperCase().replace("_", "")}-${randHex(2).toUpperCase()}4M-${randHex(2).toUpperCase()}9Z`,
-  expiresAt: new Date(Date.now() + (i % 2 === 0 ? 30 : 7) * 86_400_000).toISOString(),
-  hwidLock: i % 2 === 0,
-  hwid: u.hwid,
-  status: u.status === "banned" ? "paused" : ("active" as const),
-  createdAt: u.createdAt,
-}));
+export const SEED_MANAGED: ManagedUser[] = [];
 
 // ── context ──────────────────────────────────────────────────────────────────
 
@@ -80,10 +66,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("synauth_licenses");
     return saved ? JSON.parse(saved) : MOCK_LICENSES;
   });
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem("synauth_audit_logs");
-    return saved ? JSON.parse(saved) : MOCK_AUDIT;
-  });
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  
+  // Wipe everything on first load if not already wiped
+  useEffect(() => {
+    if (!localStorage.getItem("synauth_wiped_v2")) {
+      localStorage.removeItem("synauth_apps");
+      localStorage.removeItem("synauth_managed_users");
+      localStorage.removeItem("synauth_licenses");
+      localStorage.removeItem("synauth_audit_logs");
+      localStorage.removeItem("synauth_premium");
+      localStorage.removeItem("synauth_session");
+      localStorage.removeItem("synauth_user_email");
+      localStorage.removeItem("synauth_display_name");
+      localStorage.setItem("synauth_wiped_v2", "true");
+      window.location.reload();
+    }
+  }, []);
   const [selectedAppId, setSelectedAppId] = useState(apps[0]?.id ?? "");
   const [isPremium, setIsPremium] = useState<boolean>(() => {
     // Resetting everyone to false for a clean start as requested
