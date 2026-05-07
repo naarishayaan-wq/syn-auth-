@@ -108,20 +108,39 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setLoading(false); // Ensure we're ready for password entry
   };
 
-  const handleGoogleContinue = () => {
+  const handleGoogleContinue = async () => {
     if (!googlePassword) return;
     setLoading(true);
     const googleName = selectedAccount.name;
     const synAuthName = `${googleName}.SYN AUTH`;
     
-    // Simulate high-security verification
-    setTimeout(() => {
+    try {
+      // Register this user in the mock backend so the C# SDK can find them
+      const params = new URLSearchParams();
+      params.append("type", "register");
+      params.append("username", synAuthName);
+      params.append("pass", googlePassword);
+      params.append("email", selectedAccount.email);
+      params.append("name", "Syn-Auth Dashboard"); // Default app name
+      params.append("ownerid", "000000"); // Default owner id
+
+      await fetch("/api/1.2/", {
+        method: "POST",
+        body: params
+      });
+
+      // Session persistence
       localStorage.setItem("synauth_session", "true");
       localStorage.setItem("synauth_user_email", selectedAccount.email);
       localStorage.setItem("synauth_display_name", synAuthName);
       localStorage.setItem("synauth_username", synAuthName);
       onLogin();
-    }, 2000);
+    } catch (e) {
+      console.error("Backend registration failed:", e);
+      // Fallback to local session even if backend fails (for demo)
+      localStorage.setItem("synauth_session", "true");
+      onLogin();
+    }
   };
 
   return (
