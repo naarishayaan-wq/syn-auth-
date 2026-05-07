@@ -12,6 +12,7 @@ import Users from "@/pages/Users";
 import Tokens from "@/pages/Tokens";
 import Settings from "@/pages/Settings";
 import Integration from "@/pages/Integration";
+import NotFound from "@/pages/not-found";
 import Auth from "@/pages/Auth";
 import AuditLog from "@/pages/AuditLog";
 import { useState, useEffect } from "react";

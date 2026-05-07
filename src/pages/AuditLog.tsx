@@ -23,7 +23,7 @@ export default function AuditLogPage() {
   const { auditLogs } = useAppStore();
   const [search, setSearch] = useState("");
 
-  const filteredLogs = auditLogs.filter(log => 
+  const filteredLogs = auditLogs.filter((log: any) => 
     log.event.toLowerCase().includes(search.toLowerCase()) ||
     log.detail.toLowerCase().includes(search.toLowerCase())
   );
@@ -100,7 +100,7 @@ export default function AuditLogPage() {
             animate="show"
             className="divide-y divide-white/5"
           >
-            {filteredLogs.map((log) => (
+            {filteredLogs.map((log: any) => (
               <motion.div
                 key={log.id}
                 variants={rowVariants}

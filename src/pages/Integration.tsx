@@ -25,7 +25,7 @@ export default function Integration() {
   const [sdkLanguage, setSdkLanguage] = useState<"js" | "csharp">("js");
   const [notif, setNotif] = useState<string | null>(null);
 
-  const selectedApp = apps.find((a) => a.id === selectedAppId) ?? apps[0];
+  const selectedApp = apps.find((a: any) => a.id === selectedAppId) ?? apps[0];
   const sdkCode = selectedApp ? generateSDK(selectedApp, managedUsers, sdkLanguage) : "";
 
   function copySDK() {
@@ -94,7 +94,7 @@ export default function Integration() {
                 {apps.length === 0 ? (
                    <div className="px-4 py-3 text-xs text-muted-foreground">No applications found. Create one in the Applications tab.</div>
                 ) : (
-                  apps.map((app) => (
+                  apps.map((app: any) => (
                     <button
                       key={app.id}
                       onClick={() => handleAppSwitch(app.id, app.name)}

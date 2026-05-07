@@ -52,7 +52,7 @@ export default function Users() {
       u.key.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleGenKey() { setForm((f: any) => ({ ...f, key: generateKey() })); }
+  function handleGenKey() { setForm((f: typeof form) => ({ ...f, key: generateKey() })); }
 
   function showNotification(msg: string) {
     setNotif(msg);
@@ -73,15 +73,15 @@ export default function Users() {
       status: "active",
       createdAt: new Date().toISOString(),
     };
-    setUsers((prev: any) => [newUser, ...prev]);
+    setUsers((prev: ManagedUser[]) => [newUser, ...prev]);
     showNotification(`User ${form.username} created successfully!`);
     setForm({ username: "", password: "", key: "", appId: apps[0]?.id ?? "", expiryPreset: "7d", customExpiry: "", hwidLock: false });
     setShowCreate(false);
   }
 
-  function handleDelete(id: string) { setUsers((prev: any) => prev.filter((u: any) => u.id !== id)); }
+  function handleDelete(id: string) { setUsers((prev: ManagedUser[]) => prev.filter((u: ManagedUser) => u.id !== id)); }
   function handleTogglePause(id: string) {
-    setUsers((prev: any) => prev.map((u: any) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
+    setUsers((prev: ManagedUser[]) => prev.map((u: ManagedUser) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
   }
   function copyKey(key: string) {
     navigator.clipboard.writeText(key).catch(() => {});
@@ -104,7 +104,7 @@ export default function Users() {
       }
 
       if (result.success) {
-        setUsers((prev: any) => prev.map((u: any) => {
+        setUsers((prev: ManagedUser[]) => prev.map((u: ManagedUser) => {
           const match = valType === "key" ? u.key === valKey.trim() : u.username === valUser.trim();
           if (match && u.hwidLock && !u.hwid) return { ...u, hwid: valHwid.trim() };
           return u;
@@ -176,7 +176,7 @@ export default function Users() {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {filtered.map((u: any) => {
+                {filtered.map((u: ManagedUser) => {
                   const expired = isExpired(u.expiresAt);
                   return (
                     <motion.tr key={u.id} layout
@@ -257,7 +257,7 @@ export default function Users() {
                 })}
               </AnimatePresence>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-muted-foreground text-sm">No users found.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-muted-foreground text-sm">No users found.</td></tr>
               )}
             </tbody>
           </table>
@@ -287,8 +287,8 @@ export default function Users() {
                   <select 
                     value={form.appId} 
                     onChange={(e) => {
-                      const appName = apps.find(a => a.id === e.target.value)?.name || "App";
-                      setForm((f: any) => ({ ...f, appId: e.target.value }));
+                      const appName = apps.find((a: any) => a.id === e.target.value)?.name || "App";
+                      setForm((f: typeof form) => ({ ...f, appId: e.target.value }));
                       showNotification(`Switched to ${appName}`);
                     }}
                     className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all text-white"

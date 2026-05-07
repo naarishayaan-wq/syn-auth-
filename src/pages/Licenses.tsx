@@ -35,10 +35,10 @@ export default function Licenses() {
   const [isCreating, setIsCreating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const selectedApp = apps.find(a => a.id === selectedAppId) || apps[0];
+  const selectedApp = apps.find((a: any) => a.id === selectedAppId) || apps[0];
 
   const filteredLicenses = licenses.filter(
-    (l) =>
+    (l: License) =>
       l.key.toLowerCase().includes(search.toLowerCase()) ||
       l.appName.toLowerCase().includes(search.toLowerCase()) ||
       l.user.toLowerCase().includes(search.toLowerCase())
@@ -119,7 +119,7 @@ export default function Licenses() {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {filteredLicenses.map((lic, i) => (
+                {filteredLicenses.map((lic: License, i: number) => (
                   <motion.tr
                     key={lic.id}
                     layout

@@ -256,7 +256,7 @@ export default function Applications() {
   const [sdkCopied, setSdkCopied] = useState(false);
 
   const filtered = apps.filter(
-    (a) =>
+    (a: AppCredential) =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
       a.description.toLowerCase().includes(search.toLowerCase())
   );
@@ -292,27 +292,27 @@ export default function Applications() {
       appSecret: `sa_sec_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
       version: "1.0",
     };
-    setApps((prev) => [newApp, ...prev]);
+    setApps((prev: AppCredential[]) => [newApp, ...prev]);
     setModal(null);
   }
 
   function handleEdit() {
     if (!selected || !form.name.trim()) return;
-    setApps((prev) =>
-      prev.map((a) => (a.id === selected.id ? { ...a, name: form.name, description: form.description } : a))
+    setApps((prev: AppCredential[]) =>
+      prev.map((a: AppCredential) => (a.id === selected.id ? { ...a, name: form.name, description: form.description } : a))
     );
     setModal(null);
   }
 
   function handleDelete() {
     if (!selected) return;
-    setApps((prev) => prev.filter((a) => a.id !== selected.id));
+    setApps((prev: AppCredential[]) => prev.filter((a: AppCredential) => a.id !== selected.id));
     setModal(null);
   }
 
   function handleTogglePause(app: AppCredential) {
-    setApps((prev) =>
-      prev.map((a) => (a.id === app.id ? { ...a, status: a.status === "active" ? "paused" : "active" } : a))
+    setApps((prev: AppCredential[]) =>
+      prev.map((a: AppCredential) => (a.id === app.id ? { ...a, status: a.status === "active" ? "paused" : "active" } : a))
     );
   }
 
@@ -360,7 +360,7 @@ export default function Applications() {
       {/* App cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
-          {filtered.map((app) => (
+          {filtered.map((app: AppCredential) => (
             <AppCard
               key={app.id}
               app={app}

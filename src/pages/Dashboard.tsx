@@ -30,16 +30,16 @@ export default function Dashboard() {
   ];
 
   const pieData = [
-    { name: "Active", value: managedUsers.filter(u => u.status === "active").length },
-    { name: "Paused", value: managedUsers.filter(u => u.status === "paused").length },
-    { name: "Banned", value: managedUsers.filter(u => u.status === "banned" as any).length },
+    { name: "Active", value: managedUsers.filter((u: any) => u.status === "active").length },
+    { name: "Paused", value: managedUsers.filter((u: any) => u.status === "paused").length },
+    { name: "Banned", value: managedUsers.filter((u: any) => u.status === "banned" as any).length },
   ];
 
   const stats = [
     { label: "Total Apps", value: apps.length.toString(), icon: AppWindow, change: "Increased this month", color: "#ff1a1a" },
     { label: "Active Users", value: managedUsers.length.toString(), icon: Users, change: "Growing fast", color: "#ff1a1a" },
     { label: "Total Licenses", value: licenses.length.toString(), icon: Key, change: "+12 this week", color: "#ff1a1a" },
-    { label: "Recent Alerts", value: auditLogs.filter(l => l.type === "danger" || l.type === "warn").length.toString(), icon: Activity, change: "Action required", color: "#ff1a1a" },
+    { label: "Recent Alerts", value: auditLogs.filter((l: any) => l.type === "danger" || l.type === "warn").length.toString(), icon: Activity, change: "Action required", color: "#ff1a1a" },
   ];
 
   return (
@@ -154,7 +154,7 @@ export default function Dashboard() {
           <h2 className="text-base font-semibold text-white">Recent Activity</h2>
         </div>
         <div className="space-y-3">
-          {auditLogs.slice(0, 5).map((item, i) => (
+          {auditLogs.slice(0, 5).map((item: any, i: number) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -12 }}

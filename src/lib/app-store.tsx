@@ -1,3 +1,4 @@
+import { createContext, useContext, useState, useEffect } from "react";
 import { Application, License, AuditLog, MOCK_APPS, MOCK_LICENSES, MOCK_USERS, MOCK_AUDIT } from "./mock-data";
 import { ManagedUser } from "./key-system";
 
@@ -107,16 +108,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       type,
       time: "Just now"
     };
-    setAuditLogs(prev => [newLog, ...prev]);
+    setAuditLogs((prev: any) => [newLog, ...prev]);
   }
 
   function refreshSecret(appId: string) {
-    const app = apps.find(a => a.id === appId);
+    const app = apps.find((a: any) => a.id === appId);
     if (app) {
       addAuditLog("Secret Refreshed", `App secret regenerated for ${app.name}`, "warn");
     }
-    setApps((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, appSecret: genSecret() } : a))
+    setApps((prev: any) =>
+      prev.map((a: any) => (a.id === appId ? { ...a, appSecret: genSecret() } : a))
     );
   }
 
@@ -131,7 +132,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
       createdAt: new Date().toISOString(),
     };
-    setLicenses((prev) => [newLicense, ...prev]);
+    setLicenses((prev: any) => [newLicense, ...prev]);
     addAuditLog("License Created", `New key generated for ${appName}`, "success");
   }
 
