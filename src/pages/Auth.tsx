@@ -199,9 +199,10 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black/20" />
                         <Input 
+                          autoComplete="off"
                           value={email} onChange={(e) => setEmail(e.target.value)}
-                          className="h-14 pl-12 bg-[#ffebf2] border-none text-black font-bold rounded-2xl placeholder:text-black/10"
-                          placeholder="mvpsayann@gmail.com"
+                          className="h-14 pl-12 bg-white/5 border-white/10 text-white font-medium rounded-2xl"
+                          placeholder="Username or Email"
                         />
                       </div>
                     </div>
@@ -211,12 +212,13 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
                       <div className="relative">
                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black/20" />
                         <Input 
+                          autoComplete="off"
                           type={showPassword ? "text" : "password"}
                           value={password} onChange={(e) => setPassword(e.target.value)}
-                          className="h-14 pl-12 bg-[#ffebf2] border-none text-black font-bold rounded-2xl placeholder:text-black/10"
-                          placeholder="••••••••••"
+                          className="h-14 pl-12 pr-12 bg-white/5 border-white/10 text-white font-medium rounded-2xl"
+                          placeholder="Password"
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-black/10 hover:text-black">
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
@@ -371,8 +373,9 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
                          <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-gray-500 ml-1 uppercase tracking-wider">Verification Password</label>
                             <Input 
+                              autoComplete="new-password"
                               type="password"
-                              placeholder="Enter password"
+                              placeholder="SYN AUTH Password"
                               value={googlePassword}
                               onChange={(e) => setGooglePassword(e.target.value)}
                               className="h-12 border-gray-200 focus:border-red-600 focus:ring-0 rounded-xl text-sm font-medium px-4 text-black"
