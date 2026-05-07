@@ -47,7 +47,7 @@ export default function Users() {
   const [valLoading, setValLoading] = useState(false);
 
   const filtered = users.filter(
-    (u) =>
+    (u: ManagedUser) =>
       u.username.toLowerCase().includes(search.toLowerCase()) ||
       u.key.toLowerCase().includes(search.toLowerCase())
   );
@@ -73,15 +73,15 @@ export default function Users() {
       status: "active",
       createdAt: new Date().toISOString(),
     };
-    setUsers((prev) => [newUser, ...prev]);
+    setUsers((prev: any) => [newUser, ...prev]);
     showNotification(`User ${form.username} created successfully!`);
     setForm({ username: "", password: "", key: "", appId: apps[0]?.id ?? "", expiryPreset: "7d", customExpiry: "", hwidLock: false });
     setShowCreate(false);
   }
 
-  function handleDelete(id: string) { setUsers((prev) => prev.filter((u) => u.id !== id)); }
+  function handleDelete(id: string) { setUsers((prev: any) => prev.filter((u: any) => u.id !== id)); }
   function handleTogglePause(id: string) {
-    setUsers((prev) => prev.map((u) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
+    setUsers((prev: any) => prev.map((u: any) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
   }
   function copyKey(key: string) {
     navigator.clipboard.writeText(key).catch(() => {});
@@ -104,7 +104,7 @@ export default function Users() {
       }
 
       if (result.success) {
-        setUsers((prev) => prev.map((u) => {
+        setUsers((prev: any) => prev.map((u: any) => {
           const match = valType === "key" ? u.key === valKey.trim() : u.username === valUser.trim();
           if (match && u.hwidLock && !u.hwid) return { ...u, hwid: valHwid.trim() };
           return u;
@@ -176,7 +176,7 @@ export default function Users() {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {filtered.map((u) => {
+                {filtered.map((u: any) => {
                   const expired = isExpired(u.expiresAt);
                   return (
                     <motion.tr key={u.id} layout
@@ -293,7 +293,7 @@ export default function Users() {
                     }}
                     className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all text-white"
                   >
-                    {apps.map(app => (
+                    {apps.map((app: any) => (
                       <option key={app.id} value={app.id} className="bg-[#0d0d0d]">{app.name}</option>
                     ))}
                   </select>
