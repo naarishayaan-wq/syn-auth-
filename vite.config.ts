@@ -109,11 +109,32 @@ export default defineConfig({
                     return;
                   }
 
+                  if (type === "register") {
+                    const exists = users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
+                    if (exists) {
+                      res.end(JSON.stringify({ success: false, message: "User already exists." }));
+                      return;
+                    }
+                    const newUser = {
+                      id: "mu_" + Date.now(),
+                      username,
+                      password: pass || "",
+                      email: email || "",
+                      key: "SYNAUTH-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                      expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+                      hwidLock: false,
+                      hwid: null,
+                      status: "active",
+                      createdAt: new Date().toISOString()
+                    };
+                    users.push(newUser);
+                    saveLocalUsers(users);
+                    console.log(` [MOCK] 🆕 Registered User: ${username}`);
+                    res.end(JSON.stringify({ success: true, message: "Registered successfully!" }));
+                    return;
+                  }
+
                   // Find user:
-                  // 1. Try master account (admin/admin)
-                  // 2. Try standard login (case-insensitive username)
-                  // 3. Try license key login
-                  // 4. FALLBACK: If login fails, check if the username was actually a key
                   let user = (username.toLowerCase() === "admin" && pass === "admin")
                     ? { username: "admin", password: "admin", status: "active", expiresAt: "2030-01-01T00:00:00Z" }
                     : (type === "login" 
@@ -122,7 +143,6 @@ export default defineConfig({
 
                   if (!user && type === "login") {
                      user = users.find((u: any) => u.key === username);
-                     if (user) console.log(` [MOCK] 💡 Tip: User logged in using Key in Username field.`);
                   }
                   
                   if (user) {
