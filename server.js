@@ -13,13 +13,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// ── Database Setup ──────────────────────────────────────────────────────────
+
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const APPS_FILE = path.join(DATA_DIR, 'apps.json');
-
-// ── Database Helpers ─────────────────────────────────────────────────────────
 
 function readDB(file) {
   try {
@@ -32,6 +32,19 @@ function writeDB(file, data) {
   try {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
   } catch (e) { console.error(`Error saving ${file}:`, e); }
+}
+
+// Seed default app if empty
+if (readDB(APPS_FILE).length === 0) {
+  writeDB(APPS_FILE, [{
+    id: "app_default",
+    name: "scheckk",
+    ownerId: "OWN-21A8-32C7-F519",
+    appSecret: "sa_sec_default_secret_key_12345678",
+    version: "1.0",
+    status: "active",
+    createdAt: new Date().toISOString()
+  }]);
 }
 
 // ── Dashboard Admin API ──────────────────────────────────────────────────────
@@ -84,26 +97,17 @@ app.post('/api/1.2/', (req, res) => {
   const secret = params.secret || params.get('secret') || '';
   const username = params.username || params.get('username') || '';
   const pass = params.pass || params.get('pass') || '';
-  const key = params.key || params.get('key') || '';
+  const keyStr = params.key || params.get('key') || '';
   const hwid = params.hwid || params.get('hwid') || '';
 
   const apps = readDB(APPS_FILE);
   const users = readDB(USERS_FILE);
 
-  // 1. Find and Verify Application
   const app = apps.find(a => a.name === appName && a.ownerId === ownerid);
-  
-  if (!app && appName !== "scheckk") { // Allow the default seeded app name for safety
-    return res.json({ success: false, message: "Application not found or invalid Owner ID." });
-  }
+  if (!app && appName !== "scheckk") return res.json({ success: false, message: "Invalid Application." });
 
-  // 2. Secret Validation (for Init)
+  // 1. Initialization
   if (type === 'init') {
-    if (app && app.appSecret !== secret && appName !== "scheckk") {
-       return res.json({ success: false, message: "Invalid Application Secret." });
-    }
-
-    console.log(` [SDK] ⚙️ App Init: ${appName}`);
     return res.json({
       success: true,
       message: "Initialized",
@@ -118,39 +122,44 @@ app.post('/api/1.2/', (req, res) => {
     });
   }
 
-  // 3. Auth Logic
+  // 2. Registration (with Key)
+  if (type === 'register') {
+    const existingKey = users.find(u => u.key === keyStr && u.username === "Unused");
+    if (!existingKey) return res.json({ success: false, message: "License key not found or already used." });
+    
+    if (users.find(u => u.username?.toLowerCase() === username.toLowerCase())) {
+        return res.json({ success: false, message: "Username already exists." });
+    }
+
+    existingKey.username = username;
+    existingKey.password = pass;
+    existingKey.hwid = hwid;
+    writeDB(USERS_FILE, users);
+    return res.json({ success: true, message: "Registered successfully!" });
+  }
+
+  // 3. Login / License Login
   let user = users.find(u => 
     (u.username?.toLowerCase() === username.toLowerCase() && u.password === pass) || 
-    (u.key === key) ||
+    (u.key === keyStr) ||
     (u.key === username)
   );
 
-  // Hardcoded Admin for testing
-  if (!user && username.toLowerCase() === 'admin' && pass === 'admin') {
-     user = { username: 'admin', status: 'active', expiresAt: '2030-01-01T00:00:00Z' };
-  }
-
-  if (!user) {
-    return res.json({ success: false, message: "Invalid credentials or license key." });
-  }
-
-  // 4. Status and HWID Checks
+  if (!user) return res.json({ success: false, message: "Invalid credentials." });
   if (user.status === 'paused') return res.json({ success: false, message: "Account is paused." });
   
-  const now = new Date();
   const expiry = new Date(user.expiresAt);
-  if (expiry < now) return res.json({ success: false, message: "Subscription has expired." });
+  if (expiry < new Date()) return res.json({ success: false, message: "Subscription expired." });
 
   if (user.hwidLock) {
     if (!user.hwid) {
       user.hwid = hwid;
       writeDB(USERS_FILE, users);
     } else if (user.hwid !== hwid) {
-      return res.json({ success: false, message: "HWID mismatch. Locked to another device." });
+      return res.json({ success: false, message: "HWID mismatch." });
     }
   }
 
-  console.log(` [SDK] ✅ ${type} SUCCESS: ${user.username}`);
   return res.json({
     success: true,
     message: "Logged in successfully!",
@@ -158,18 +167,11 @@ app.post('/api/1.2/', (req, res) => {
       username: user.username || "KeyUser",
       hwid: hwid || user.hwid || 'remote',
       expiry: Math.floor(expiry.getTime() / 1000).toString(),
-      createdate: Math.floor(new Date(user.createdAt || now).getTime() / 1000).toString(),
       subscriptions: [{ subscription: "Default", expiry: Math.floor(expiry.getTime() / 1000).toString() }]
     }
   });
 });
 
-// SPA fallback
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
-app.listen(PORT, () => {
-  console.log(`\n 🚀 SYN AUTH SERVER LIVE`);
-  console.log(` 📍 API Endpoint: http://localhost:${PORT}/api/1.2/`);
-});
+app.listen(PORT, () => console.log(`🚀 SYN AUTH PROFESSIONAL SERVER LIVE ON PORT ${PORT}`));
