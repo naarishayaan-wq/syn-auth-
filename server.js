@@ -13,57 +13,87 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
-const USERS_FILE = path.join(__dirname, 'users_mock.json');
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
-function getLocalUsers() {
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const APPS_FILE = path.join(DATA_DIR, 'apps.json');
+
+// ── Database Helpers ─────────────────────────────────────────────────────────
+
+function readDB(file) {
   try {
-    if (!fs.existsSync(USERS_FILE)) return [];
-    const data = fs.readFileSync(USERS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (e) {
-    return [];
-  }
+    if (!fs.existsSync(file)) return [];
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) { return []; }
 }
 
-function saveLocalUsers(users) {
+function writeDB(file, data) {
   try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  } catch (e) {
-    console.error('Failed to save users:', e);
-  }
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  } catch (e) { console.error(`Error saving ${file}:`, e); }
 }
 
-// ── KEYAUTH API MOCK ─────────────────────────────────────────────────────────
+// ── Dashboard Admin API ──────────────────────────────────────────────────────
+
+app.get('/api/admin/users', (req, res) => res.json(readDB(USERS_FILE)));
+app.post('/api/admin/users', (req, res) => {
+  const users = readDB(USERS_FILE);
+  const newUser = { ...req.body, id: "mu_" + Date.now(), createdAt: new Date().toISOString() };
+  users.push(newUser);
+  writeDB(USERS_FILE, users);
+  res.json({ success: true, user: newUser });
+});
+app.delete('/api/admin/users/:id', (req, res) => {
+  const users = readDB(USERS_FILE).filter(u => u.id !== req.params.id);
+  writeDB(USERS_FILE, users);
+  res.json({ success: true });
+});
+app.put('/api/admin/users/:id', (req, res) => {
+  const users = readDB(USERS_FILE).map(u => u.id === req.params.id ? { ...u, ...req.body } : u);
+  writeDB(USERS_FILE, users);
+  res.json({ success: true });
+});
+
+app.get('/api/admin/apps', (req, res) => res.json(readDB(APPS_FILE)));
+app.post('/api/admin/apps', (req, res) => {
+  const apps = readDB(APPS_FILE);
+  const newApp = { ...req.body, id: "app_" + Date.now(), createdAt: new Date().toISOString() };
+  apps.push(newApp);
+  writeDB(APPS_FILE, apps);
+  res.json({ success: true, app: newApp });
+});
+
+// ── KEYAUTH SDK API (v1.2) ───────────────────────────────────────────────────
 
 app.post('/api/1.2/', (req, res) => {
-  const params = new URLSearchParams(req.body);
-  const type = params.get('type');
-  const username = params.get('username') || '';
-  const pass = params.get('pass') || '';
-  const key = params.get('key') || '';
-  const email = params.get('email') || '';
+  const params = req.body.type ? req.body : new URLSearchParams(req.body);
+  const type = params.type || params.get('type');
+  const appName = params.name || params.get('name') || '';
+  const ownerid = params.ownerid || params.get('ownerid') || '';
+  const secret = params.secret || params.get('secret') || '';
+  const username = params.username || params.get('username') || '';
+  const pass = params.pass || params.get('pass') || '';
+  const key = params.key || params.get('key') || '';
+  const hwid = params.hwid || params.get('hwid') || '';
 
-  console.log(` [API] 📥 ${new Date().toISOString()} | Type: ${type} | User/Key: ${username || key}`);
+  const apps = readDB(APPS_FILE);
+  const users = readDB(USERS_FILE);
 
-  let users = getLocalUsers();
-
-  if (type === 'sync') {
-    try {
-      const usersData = params.get('users');
-      if (usersData) {
-        const syncedUsers = JSON.parse(usersData);
-        saveLocalUsers(syncedUsers);
-        console.log(` [API] 🔄 SUCCESS: Synced ${syncedUsers.length} users from dashboard.`);
-      }
-      return res.json({ success: true, message: "Synchronized successfully." });
-    } catch (e) {
-      console.error(` [API] ❌ SYNC ERROR:`, e.message);
-      return res.json({ success: false, message: "Sync failed: " + e.message });
-    }
+  // 1. Find and Verify Application
+  const app = apps.find(a => a.name === appName && a.ownerId === ownerid);
+  
+  if (!app && appName !== "scheckk") { // Allow the default seeded app name for safety
+    return res.json({ success: false, message: "Application not found or invalid Owner ID." });
   }
 
+  // 2. Secret Validation (for Init)
   if (type === 'init') {
-    console.log(` [API] ⚙️ Initializing app: ${params.get('name')}`);
+    if (app && app.appSecret !== secret && appName !== "scheckk") {
+       return res.json({ success: false, message: "Invalid Application Secret." });
+    }
+
+    console.log(` [SDK] ⚙️ App Init: ${appName}`);
     return res.json({
       success: true,
       message: "Initialized",
@@ -71,100 +101,57 @@ app.post('/api/1.2/', (req, res) => {
       appinfo: {
         numUsers: users.length.toString(),
         numOnlineUsers: "1",
-        numKeys: "100",
-        version: "1.0",
+        numKeys: users.filter(u => u.key).length.toString(),
+        version: app?.version || "1.0",
         customerPanelLink: "https://syn-auth.onrender.com"
       }
     });
   }
 
-  if (users.length === 0 && username.toLowerCase() !== 'admin') {
-    console.warn(` [API] ⚠️ ALERT: Database is empty. Please open the dashboard to sync users.`);
-    return res.json({ success: false, message: "Server database is empty. Administrator needs to sync dashboard." });
+  // 3. Auth Logic
+  let user = users.find(u => 
+    (u.username?.toLowerCase() === username.toLowerCase() && u.password === pass) || 
+    (u.key === key) ||
+    (u.key === username)
+  );
+
+  // Hardcoded Admin for testing
+  if (!user && username.toLowerCase() === 'admin' && pass === 'admin') {
+     user = { username: 'admin', status: 'active', expiresAt: '2030-01-01T00:00:00Z' };
   }
 
-  if (type === 'register') {
-    const exists = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (exists) return res.json({ success: false, message: "User already exists." });
-    
-    const newUser = {
-      id: "mu_" + Date.now(),
-      username,
-      password: pass,
-      email,
-      key: "SYNAUTH-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
-      expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-      hwidLock: false,
-      status: "active",
-      createdAt: new Date().toISOString()
-    };
-    users.push(newUser);
-    saveLocalUsers(users);
-    console.log(` [API] ✅ Registered new user: ${username}`);
-    return res.json({ success: true, message: "Registered successfully!" });
+  if (!user) {
+    return res.json({ success: false, message: "Invalid credentials or license key." });
   }
 
-  // Find user
-  let user = (username.toLowerCase() === 'admin' && pass === 'admin')
-    ? { username: 'admin', password: 'admin', status: 'active', expiresAt: '2030-01-01T00:00:00Z' }
-    : (type === 'login' 
-        ? users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === pass)
-        : users.find(u => u.key === key));
+  // 4. Status and HWID Checks
+  if (user.status === 'paused') return res.json({ success: false, message: "Account is paused." });
+  
+  const now = new Date();
+  const expiry = new Date(user.expiresAt);
+  if (expiry < now) return res.json({ success: false, message: "Subscription has expired." });
 
-  if (!user && type === 'login') {
-    // Check if logging in with key as username
-    user = users.find(u => u.key === username);
-  }
-
-  if (user) {
-    // 1. Check account status
-    if (user.status === 'paused') {
-      console.log(` [API] 🚫 Login denied: Account paused for ${user.username}`);
-      return res.json({ success: false, message: "Your account is paused. Contact support." });
+  if (user.hwidLock) {
+    if (!user.hwid) {
+      user.hwid = hwid;
+      writeDB(USERS_FILE, users);
+    } else if (user.hwid !== hwid) {
+      return res.json({ success: false, message: "HWID mismatch. Locked to another device." });
     }
-
-    // 2. Check HWID Lock
-    const clientHwid = params.get('hwid');
-    if (user.hwidLock) {
-      if (!user.hwid && clientHwid) {
-        user.hwid = clientHwid;
-        saveLocalUsers(users);
-        console.log(` [API] 🔐 HWID Registered for user: ${user.username}`);
-      } else if (user.hwid && user.hwid !== clientHwid) {
-        console.log(` [API] 🚫 HWID MISMATCH for user: ${user.username}`);
-        return res.json({ success: false, message: "HWID mismatch. Locked to another device." });
-      }
-    }
-
-    // 3. Check Expiry
-    const now = new Date();
-    const expiry = new Date(user.expiresAt || Date.now());
-    if (expiry < now) {
-      console.log(` [API] ⌛ Expiry denied for user: ${user.username}`);
-      return res.json({ success: false, message: "Your subscription has expired." });
-    }
-
-    console.log(` [API] 🔓 SUCCESS: User ${user.username} logged in.`);
-    return res.json({
-      success: true,
-      message: "Logged in successfully!",
-      sessionid: "sess_" + Math.random().toString(36).substring(7),
-      info: {
-        username: user.username || "KeyUser",
-        ip: req.ip,
-        hwid: clientHwid || user.hwid || 'remote_hwid',
-        createdate: Math.floor(new Date(user.createdAt || Date.now()).getTime() / 1000).toString(),
-        lastlogin: Math.floor(Date.now() / 1000).toString(),
-        expiry: Math.floor(expiry.getTime() / 1000).toString(),
-        subscriptions: [
-          { subscription: "Default", key: user.key || "SYNAUTH-KEY", expiry: Math.floor(expiry.getTime() / 1000).toString(), timeleft: Math.floor((expiry.getTime() - now.getTime()) / 1000).toString() }
-        ]
-      }
-    });
   }
 
-  console.log(` [API] ❌ Login failed for: ${username || key}`);
-  res.json({ success: false, message: "Invalid credentials or key." });
+  console.log(` [SDK] ✅ ${type} SUCCESS: ${user.username}`);
+  return res.json({
+    success: true,
+    message: "Logged in successfully!",
+    info: {
+      username: user.username || "KeyUser",
+      hwid: hwid || user.hwid || 'remote',
+      expiry: Math.floor(expiry.getTime() / 1000).toString(),
+      createdate: Math.floor(new Date(user.createdAt || now).getTime() / 1000).toString(),
+      subscriptions: [{ subscription: "Default", expiry: Math.floor(expiry.getTime() / 1000).toString() }]
+    }
+  });
 });
 
 // SPA fallback
@@ -173,6 +160,6 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n 🚀 SYN AUTH Production Server Live`);
-  console.log(` 📍 Endpoint: http://localhost:${PORT}/api/1.2/`);
+  console.log(`\n 🚀 SYN AUTH SERVER LIVE`);
+  console.log(` 📍 API Endpoint: http://localhost:${PORT}/api/1.2/`);
 });

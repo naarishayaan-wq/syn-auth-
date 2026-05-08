@@ -21,7 +21,7 @@ const rowVariants: Variants = {
 };
 
 export default function Users() {
-  const { managedUsers: users, setManagedUsers: setUsers, apps } = useAppStore();
+  const { managedUsers: users, setManagedUsers: setUsers, apps, deleteUser, updateUser } = useAppStore();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showValidator, setShowValidator] = useState(false);
@@ -70,7 +70,7 @@ export default function Users() {
 
     const expiresAt = expiryFromPreset(form.expiryPreset, form.expiryPreset === "custom" ? form.customExpiry : undefined);
     const newUser: ManagedUser = {
-      id: `mu_${Date.now()}`,
+      id: "", // Server will set ID
       username: form.username.trim(),
       password: form.password.trim(),
       key: generateKey(),
@@ -80,15 +80,18 @@ export default function Users() {
       status: "active",
       createdAt: new Date().toISOString(),
     };
-    setUsers((prev: ManagedUser[]) => [newUser, ...prev]);
+    setUsers(newUser as any);
     showNotification(`User ${form.username} created successfully!`);
     setForm({ username: "", password: "", appId: apps[0]?.id ?? "", expiryPreset: "7d", customExpiry: "", hwidLock: false });
     setShowCreate(false);
   }
 
-  function handleDelete(id: string) { setUsers((prev: ManagedUser[]) => prev.filter((u: ManagedUser) => u.id !== id)); }
+  function handleDelete(id: string) { deleteUser?.(id); }
   function handleTogglePause(id: string) {
-    setUsers((prev: ManagedUser[]) => prev.map((u: ManagedUser) => u.id === id ? { ...u, status: u.status === "active" ? "paused" : "active" } : u));
+    const user = users.find(u => u.id === id);
+    if (user) {
+      updateUser?.(id, { status: user.status === "active" ? "paused" : "active" });
+    }
   }
   function copyKey(key: string) {
     navigator.clipboard.writeText(key).catch(() => { });

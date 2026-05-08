@@ -90,100 +90,82 @@ type StoreCtx = {
 const AppStoreContext = createContext<StoreCtx | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [apps, setApps] = useState<AppCredential[]>(() => {
-    const saved = localStorage.getItem("synauth_apps");
-    return saved ? JSON.parse(saved) : SEEDED_APPS;
-  });
-  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>(() => {
-    const saved = localStorage.getItem("synauth_managed_users");
-    return saved ? JSON.parse(saved) : SEED_MANAGED;
-  });
-  const [licenses, setLicenses] = useState<License[]>(() => {
-    const saved = localStorage.getItem("synauth_licenses");
-    return saved ? JSON.parse(saved) : MOCK_LICENSES;
-  });
+  const [apps, setApps] = useState<AppCredential[]>([]);
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
+  const [licenses, setLicenses] = useState<License[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  
-  // Wipe everything on first load if not already wiped
-  useEffect(() => {
-    if (!localStorage.getItem("synauth_wiped_v2")) {
-      localStorage.removeItem("synauth_apps");
-      localStorage.removeItem("synauth_managed_users");
-      localStorage.removeItem("synauth_licenses");
-      localStorage.removeItem("synauth_audit_logs");
-      localStorage.removeItem("synauth_premium");
-      localStorage.removeItem("synauth_session");
-      localStorage.removeItem("synauth_user_email");
-      localStorage.removeItem("synauth_display_name");
-      localStorage.setItem("synauth_wiped_v2", "true");
-      window.location.reload();
-    }
-  }, []);
-  const [selectedAppId, setSelectedAppId] = useState(apps[0]?.id ?? "");
-  const [isPremium, setIsPremium] = useState<boolean>(() => {
-    // Resetting everyone to false for a clean start as requested
-    localStorage.removeItem("synauth_premium");
-    return false;
-  });
+  const [selectedAppId, setSelectedAppId] = useState("");
+  const [isPremium, setIsPremium] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Persist to localStorage
+  // Fetch data from server on mount
   useEffect(() => {
-    localStorage.setItem("synauth_apps", JSON.stringify(apps));
-  }, [apps]);
-
-  useEffect(() => {
-    if (isPremium) {
-      localStorage.setItem("synauth_premium", "true");
-    } else {
-      localStorage.removeItem("synauth_premium");
-    }
-  }, [isPremium]);
-
-  useEffect(() => {
-    localStorage.setItem("synauth_managed_users", JSON.stringify(managedUsers));
-  }, [managedUsers]);
-
-  useEffect(() => {
-    localStorage.setItem("synauth_licenses", JSON.stringify(licenses));
-  }, [licenses]);
-
-  useEffect(() => {
-    localStorage.setItem("synauth_audit_logs", JSON.stringify(auditLogs));
-  }, [auditLogs]);
-
-  useEffect(() => {
-    localStorage.setItem("synauth_premium", isPremium.toString());
-  }, [isPremium]);
-
-  // Sync users to local mock server for testing
-  useEffect(() => {
-    const syncUsers = async () => {
+    const fetchData = async () => {
       try {
-        const formData = new URLSearchParams();
-        formData.append("type", "sync");
-        formData.append("users", JSON.stringify(managedUsers));
-        formData.append("apps", JSON.stringify(apps));
+        const [uRes, aRes] = await Promise.all([
+          fetch("/api/admin/users"),
+          fetch("/api/admin/apps")
+        ]);
+        const uData = await uRes.json();
+        const aData = await aRes.json();
         
-        // Use relative path without leading slash to respect base path if needed, 
-        // or just use /api/1.2/ which Vite middleware handles at the root.
-        const response = await fetch("/api/1.2/", {
-          method: "POST",
-          body: formData,
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        console.log(" [MOCK] Sync Success:", data.message);
+        setManagedUsers(uData);
+        setApps(aData);
+        if (aData.length > 0) setSelectedAppId(aData[0].id);
       } catch (e) {
-        console.warn(" [MOCK] Sync failed. Make sure the local dev server is running.");
+        console.error("Failed to fetch data:", e);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    // Debounce or delay slightly to ensure state is stable
-    const timer = setTimeout(syncUsers, 500);
-    return () => clearTimeout(timer);
-  }, [managedUsers, apps]);
+    fetchData();
+  }, []);
+
+  // Save App helper
+  async function saveApp(newApp: AppCredential) {
+    try {
+      const res = await fetch("/api/admin/apps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newApp)
+      });
+      const data = await res.json();
+      if (data.success) setApps(prev => [data.app, ...prev]);
+    } catch (e) { console.error(e); }
+  }
+
+  // Save User helper
+  async function saveUser(newUser: ManagedUser) {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser)
+      });
+      const data = await res.json();
+      if (data.success) setManagedUsers(prev => [data.user, ...prev]);
+    } catch (e) { console.error(e); }
+  }
+
+  // Delete User helper
+  async function deleteUser(id: string) {
+    try {
+      await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      setManagedUsers(prev => prev.filter(u => u.id !== id));
+    } catch (e) { console.error(e); }
+  }
+
+  // Update User helper
+  async function updateUser(id: string, updates: Partial<ManagedUser>) {
+    try {
+      await fetch(`/api/admin/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates)
+      });
+      setManagedUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    } catch (e) { console.error(e); }
+  }
 
   function addAuditLog(event: string, detail: string, type: AuditLog["type"]) {
     const newLog: AuditLog = {
@@ -197,34 +179,35 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }
 
   function refreshSecret(appId: string) {
-    const app = apps.find((a: any) => a.id === appId);
-    if (app) {
-      addAuditLog("Secret Refreshed", `App secret regenerated for ${app.name}`, "warn");
-    }
-    setApps((prev: any) =>
-      prev.map((a: any) => (a.id === appId ? { ...a, appSecret: genSecret() } : a))
-    );
+    const newSecret = genSecret();
+    setApps(prev => prev.map(a => a.id === appId ? { ...a, appSecret: newSecret } : a));
+    addAuditLog("Secret Refreshed", `App secret regenerated`, "warn");
   }
 
   function createLicense(appId: string, appName: string, expiry: string = "30d") {
     const days = expiry === "999d" ? 3650 : parseInt(expiry) || 30;
-    const newLicense: License = {
-      id: `lic_${randHex(8)}`,
+    const newUser: ManagedUser = {
+      id: "", // Server will set ID
+      username: "Unused",
+      password: "",
       key: `SYNAUTH-${randHex(4).toUpperCase()}-${randHex(4).toUpperCase()}-${randHex(4).toUpperCase()}`,
-      appId,
-      appName,
-      status: "active",
-      user: "Unused",
       expiresAt: new Date(Date.now() + days * 86_400_000).toISOString(),
+      hwidLock: false,
+      hwid: null,
+      status: "active",
       createdAt: new Date().toISOString(),
     };
-    setLicenses((prev: any) => [newLicense, ...prev]);
+    saveUser(newUser);
     addAuditLog("License Created", `New ${expiry} key generated for ${appName}`, "success");
   }
 
+  if (loading) return <div className="h-screen w-screen bg-background flex items-center justify-center text-primary font-mono">INITIALIZING SYN AUTH...</div>;
+
   return (
     <AppStoreContext.Provider value={{ 
-      apps, setApps, managedUsers, setManagedUsers, licenses, setLicenses, auditLogs, addAuditLog,
+      apps, setApps: saveApp as any, managedUsers, setManagedUsers: saveUser as any, 
+      deleteUser, updateUser,
+      licenses, setLicenses, auditLogs, addAuditLog,
       refreshSecret, createLicense, selectedAppId, setSelectedAppId, isPremium, setIsPremium 
     }}>
       {children}
