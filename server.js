@@ -43,7 +43,7 @@ app.post('/api/1.2/', (req, res) => {
   const key = params.get('key') || '';
   const email = params.get('email') || '';
 
-  console.log(` [API] 📥 Request: ${type} | User: ${username}`);
+  console.log(` [API] 📥 ${new Date().toISOString()} | Type: ${type} | User/Key: ${username || key}`);
 
   let users = getLocalUsers();
 
@@ -53,20 +53,22 @@ app.post('/api/1.2/', (req, res) => {
       if (usersData) {
         const syncedUsers = JSON.parse(usersData);
         saveLocalUsers(syncedUsers);
-        console.log(` [API] 🔄 Synced ${syncedUsers.length} users.`);
+        console.log(` [API] 🔄 SUCCESS: Synced ${syncedUsers.length} users from dashboard.`);
       }
       return res.json({ success: true, message: "Synchronized successfully." });
     } catch (e) {
+      console.error(` [API] ❌ SYNC ERROR:`, e.message);
       return res.json({ success: false, message: "Sync failed: " + e.message });
     }
   }
 
   if (type === 'init') {
+    console.log(` [API] ⚙️ Initializing app: ${params.get('name')}`);
     return res.json({
       success: true,
       message: "Initialized",
       sessionid: "sess_" + Math.random().toString(36).substring(7),
-      appinfo: { // Changed from 'info' to 'appinfo' to match KeyAuth.cs
+      appinfo: {
         numUsers: users.length.toString(),
         numOnlineUsers: "1",
         numKeys: "100",
@@ -74,6 +76,11 @@ app.post('/api/1.2/', (req, res) => {
         customerPanelLink: "https://syn-auth.onrender.com"
       }
     });
+  }
+
+  if (users.length === 0 && username.toLowerCase() !== 'admin') {
+    console.warn(` [API] ⚠️ ALERT: Database is empty. Please open the dashboard to sync users.`);
+    return res.json({ success: false, message: "Server database is empty. Administrator needs to sync dashboard." });
   }
 
   if (type === 'register') {
@@ -93,6 +100,7 @@ app.post('/api/1.2/', (req, res) => {
     };
     users.push(newUser);
     saveLocalUsers(users);
+    console.log(` [API] ✅ Registered new user: ${username}`);
     return res.json({ success: true, message: "Registered successfully!" });
   }
 
@@ -111,6 +119,7 @@ app.post('/api/1.2/', (req, res) => {
   if (user) {
     // 1. Check account status
     if (user.status === 'paused') {
+      console.log(` [API] 🚫 Login denied: Account paused for ${user.username}`);
       return res.json({ success: false, message: "Your account is paused. Contact support." });
     }
 
@@ -118,12 +127,12 @@ app.post('/api/1.2/', (req, res) => {
     const clientHwid = params.get('hwid');
     if (user.hwidLock) {
       if (!user.hwid && clientHwid) {
-        // First login: Register HWID
         user.hwid = clientHwid;
         saveLocalUsers(users);
         console.log(` [API] 🔐 HWID Registered for user: ${user.username}`);
       } else if (user.hwid && user.hwid !== clientHwid) {
-        return res.json({ success: false, message: "HWID mismatch. This key is locked to another device." });
+        console.log(` [API] 🚫 HWID MISMATCH for user: ${user.username}`);
+        return res.json({ success: false, message: "HWID mismatch. Locked to another device." });
       }
     }
 
@@ -131,9 +140,11 @@ app.post('/api/1.2/', (req, res) => {
     const now = new Date();
     const expiry = new Date(user.expiresAt || Date.now());
     if (expiry < now) {
+      console.log(` [API] ⌛ Expiry denied for user: ${user.username}`);
       return res.json({ success: false, message: "Your subscription has expired." });
     }
 
+    console.log(` [API] 🔓 SUCCESS: User ${user.username} logged in.`);
     return res.json({
       success: true,
       message: "Logged in successfully!",
@@ -152,6 +163,7 @@ app.post('/api/1.2/', (req, res) => {
     });
   }
 
+  console.log(` [API] ❌ Login failed for: ${username || key}`);
   res.json({ success: false, message: "Invalid credentials or key." });
 });
 

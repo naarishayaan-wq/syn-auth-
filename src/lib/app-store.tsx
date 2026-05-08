@@ -28,9 +28,45 @@ export type AppCredential = Application & {
 
 // ── seed data ────────────────────────────────────────────────────────────────
 
-const SEEDED_APPS: AppCredential[] = [];
+const SEEDED_APPS: AppCredential[] = [
+  {
+    id: "app_default",
+    name: "scheckk",
+    description: "Production Auth System",
+    status: "active",
+    users: 2,
+    licenses: 2,
+    createdAt: new Date().toISOString(),
+    ownerId: "OWN-21A8-32C7-F519",
+    appSecret: "sa_sec_default_secret_key_12345678",
+    version: "1.0"
+  }
+];
 
-export const SEED_MANAGED: ManagedUser[] = [];
+export const SEED_MANAGED: ManagedUser[] = [
+  {
+    id: "u_1",
+    username: "syn",
+    password: "1",
+    key: "SYNAUTH-OYZD-SALY-4KLS",
+    expiresAt: "2030-01-01T00:00:00Z",
+    hwidLock: false,
+    hwid: null,
+    status: "active",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "u_2",
+    username: "1",
+    password: "1",
+    key: "SYNAUTH-YX8V-FRYL-0TXZ",
+    expiresAt: "2030-01-01T00:00:00Z",
+    hwidLock: false,
+    hwid: null,
+    status: "active",
+    createdAt: new Date().toISOString()
+  }
+];
 
 // ── context ──────────────────────────────────────────────────────────────────
 
