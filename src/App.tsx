@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import { Layout } from "@/components/Layout";
@@ -62,13 +63,28 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check for existing session
-    const session = localStorage.getItem("synauth_session");
-    if (session === "true") {
-      setIsAuthenticated(true);
-    } else {
+    const checkAuth = () => {
+      const session = localStorage.getItem("synauth_session");
+      const token = localStorage.getItem("synauth_token");
+      if (session === "true" && token) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    };
+    
+    checkAuth();
+    
+    // Listen for storage changes (e.g. logout in another tab)
+    window.addEventListener("storage", checkAuth);
+    // Listen for custom logout events from AppStore
+    window.addEventListener("synauth-logout", () => {
       setIsAuthenticated(false);
-    }
+    });
+    
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+    };
   }, []);
 
   if (isAuthenticated === null) {
@@ -116,6 +132,7 @@ function App() {
           </WouterRouter>
         </AppStoreProvider>
         <Toaster />
+        <SonnerToaster richColors position="top-right" />
       </TooltipProvider>
     </QueryClientProvider>
   );

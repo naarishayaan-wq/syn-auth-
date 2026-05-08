@@ -250,6 +250,7 @@ export default function Applications() {
   const [modal, setModal] = useState<ModalMode>(null);
   const [selected, setSelected] = useState<AppCredential | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
+  const [isCreating, setIsCreating] = useState(false);
 
   // SDK preview modal
   const [sdkApp, setSdkApp] = useState<AppCredential | null>(null);
@@ -278,22 +279,29 @@ export default function Applications() {
     setModal("delete");
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!form.name.trim()) return;
-    const newApp: AppCredential = {
-      id: "", // Server will set ID
-      name: form.name,
-      description: form.description,
-      status: "active",
-      users: 0,
-      licenses: 0,
-      createdAt: new Date().toISOString(),
-      ownerId: `OWN-${Math.random().toString(16).slice(2, 6).toUpperCase()}-${Math.random().toString(16).slice(2, 6).toUpperCase()}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`,
-      appSecret: `sa_sec_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
-      version: "1.0",
-    };
-    saveApp?.(newApp as any);
-    setModal(null);
+    setIsCreating(true);
+    try {
+      const newApp: AppCredential = {
+        id: "", // Server will set ID
+        name: form.name,
+        description: form.description,
+        status: "active",
+        users: 0,
+        licenses: 0,
+        createdAt: new Date().toISOString(),
+        ownerId: `OWN-${Math.random().toString(16).slice(2, 6).toUpperCase()}-${Math.random().toString(16).slice(2, 6).toUpperCase()}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`,
+        appSecret: `sa_sec_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
+        version: "1.0",
+      };
+      await (saveApp as any)(newApp);
+      setModal(null);
+    } catch (e) {
+      // toast is handled in store
+    } finally {
+      setIsCreating(false);
+    }
   }
 
   function handleEdit() {
@@ -430,10 +438,18 @@ export default function Applications() {
                 <Button variant="ghost" onClick={() => setModal(null)} className="text-muted-foreground">Cancel</Button>
                 <Button
                   data-testid="button-confirm-modal"
+                  disabled={isCreating}
                   onClick={modal === "create" ? handleCreate : handleEdit}
-                  className="bg-primary hover:bg-primary/90 hover:shadow-[0_0_15px_rgba(255,26,26,0.3)] transition-all"
+                  className="bg-primary hover:bg-primary/90 hover:shadow-[0_0_15px_rgba(255,26,26,0.3)] transition-all min-w-[100px]"
                 >
-                  {modal === "create" ? "Create" : "Save Changes"}
+                  {isCreating ? (
+                    <div className="flex items-center gap-2">
+                       <RefreshCw className="h-3 w-3 animate-spin" />
+                       Creating...
+                    </div>
+                  ) : (
+                    modal === "create" ? "Create" : "Save Changes"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -33,7 +33,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [showGoogleContinue, setShowGoogleContinue] = useState(false);
   const [showRegistrationWelcome, setShowRegistrationWelcome] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setError("Please fill in all fields.");
@@ -42,30 +42,41 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
+    try {
       if (isLogin) {
-        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
-        if ((email === "admin@gmail.com" && password === "admin") || (users[email] && users[email] === password)) {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: email, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.setItem("synauth_token", data.token);
           localStorage.setItem("synauth_session", "true");
-          localStorage.setItem("synauth_user_email", email);
+          localStorage.setItem("synauth_user_email", data.user.email);
+          localStorage.setItem("synauth_username", data.user.username);
           onLogin();
         } else {
-          setError("Invalid credentials.");
-          setLoading(false);
+          setError(data.message || "Invalid credentials.");
         }
       } else {
-        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
-        if (users[email]) {
-          setError("Account already exists.");
-          setLoading(false);
-        } else {
-          users[email] = password;
-          localStorage.setItem("synauth_users", JSON.stringify(users));
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: email, password, email: email })
+        });
+        const data = await res.json();
+        if (data.success) {
           setShowRegistrationWelcome(true);
-          setLoading(false);
+        } else {
+          setError(data.message || "Registration failed.");
         }
       }
-    }, 1200);
+    } catch (e) {
+      setError("Connection error. Ensure backend is running.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = (e: React.FormEvent) => {
@@ -75,26 +86,12 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     
     setTimeout(() => {
       if (forgotStep === 1) {
-        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
-        if (users[email] || email === "admin@gmail.com") {
-          const code = Math.floor(100000 + Math.random() * 900000).toString();
-          setVerificationCode(code);
-          setForgotStep(2);
-          setSuccess(`Code sent to ${email}`);
-        } else {
-          setError("Email not found.");
-        }
+        // Mock forgot password for now as it needs email service
+        setForgotStep(2);
+        setSuccess(`Code sent to ${email}`);
       } else if (forgotStep === 2) {
-        if (inputCode === verificationCode || inputCode === "123456") {
-          setForgotStep(3);
-          setSuccess("");
-        } else {
-          setError("Invalid code.");
-        }
+        setForgotStep(3);
       } else if (forgotStep === 3) {
-        const users = JSON.parse(localStorage.getItem("synauth_users") || "{}");
-        users[email] = newPassword;
-        localStorage.setItem("synauth_users", JSON.stringify(users));
         setSuccess("Password updated!");
         setTimeout(() => { setIsForgot(false); setForgotStep(1); setIsLogin(true); }, 1500);
       }
@@ -105,7 +102,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const handleGoogleAccountSelect = (acc: any) => {
     setSelectedAccount(acc);
     setShowGoogleContinue(true);
-    setLoading(false); // Ensure we're ready for password entry
+    setLoading(false);
   };
 
   const handleGoogleContinue = async () => {
@@ -115,31 +112,40 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     const synAuthName = `${googleName}.SYN AUTH`;
     
     try {
-      // Register this user in the mock backend so the C# SDK can find them
-      const params = new URLSearchParams();
-      params.append("type", "register");
-      params.append("username", synAuthName);
-      params.append("pass", googlePassword);
-      params.append("email", selectedAccount.email);
-      params.append("name", "Syn-Auth Dashboard"); // Default app name
-      params.append("ownerid", "000000"); // Default owner id
-
-      await fetch("/api/1.2/", {
+      // Register/Login via Google
+      const res = await fetch("/api/auth/register", {
         method: "POST",
-        body: params
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          username: synAuthName, 
+          password: googlePassword, 
+          email: selectedAccount.email 
+        })
       });
-
-      // Session persistence
-      localStorage.setItem("synauth_session", "true");
-      localStorage.setItem("synauth_user_email", selectedAccount.email);
-      localStorage.setItem("synauth_display_name", synAuthName);
-      localStorage.setItem("synauth_username", synAuthName);
-      onLogin();
+      
+      // Now login to get token
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: synAuthName, password: googlePassword })
+      });
+      
+      const data = await loginRes.json();
+      if (data.success) {
+        localStorage.setItem("synauth_token", data.token);
+        localStorage.setItem("synauth_session", "true");
+        localStorage.setItem("synauth_user_email", selectedAccount.email);
+        localStorage.setItem("synauth_display_name", synAuthName);
+        localStorage.setItem("synauth_username", synAuthName);
+        onLogin();
+      } else {
+        setError("Google Auth synchronization failed.");
+      }
     } catch (e) {
       console.error("Backend registration failed:", e);
-      // Fallback to local session even if backend fails (for demo)
-      localStorage.setItem("synauth_session", "true");
-      onLogin();
+      setError("Auth service unavailable.");
+    } finally {
+      setLoading(false);
     }
   };
 

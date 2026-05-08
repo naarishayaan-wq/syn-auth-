@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { Application, License, AuditLog, MOCK_APPS, MOCK_LICENSES, MOCK_USERS, MOCK_AUDIT } from "./mock-data";
 import { ManagedUser } from "./key-system";
+import { toast } from "sonner";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,19 +99,32 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Helper to get token
+  const getAuthHeader = () => {
+    const token = localStorage.getItem("synauth_token");
+    return token ? { "Authorization": `Bearer ${token}` } : {};
+  };
+
   // Fetch data from server on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const headers = getAuthHeader();
         const [uRes, aRes] = await Promise.all([
-          fetch("/api/admin/users"),
-          fetch("/api/admin/apps")
+          fetch("/api/admin/users", { headers }),
+          fetch("/api/admin/apps", { headers })
         ]);
+        
+        if (uRes.status === 401 || aRes.status === 401) {
+          console.error("Session expired or unauthorized. Logging out...");
+          localStorage.removeItem("synauth_token");
+          localStorage.removeItem("synauth_session");
+          window.dispatchEvent(new Event("synauth-logout"));
+          return;
+        }
+
         if (!uRes.ok || !aRes.ok) {
           console.error("Server returned error:", uRes.status, aRes.status);
-          setManagedUsers([]);
-          setApps([]);
-          setLoading(false);
           return;
         }
 
@@ -135,7 +149,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       console.log(" [DASHBOARD] 📱 Saving app to server...");
       const res = await fetch("/api/admin/apps", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader()
+        },
         body: JSON.stringify(newApp)
       });
       
@@ -147,22 +164,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         setApps(prev => [data.app, ...prev]);
+        toast.success("Application created successfully!");
         console.log(" [DASHBOARD] ✅ App saved successfully");
       } else {
         throw new Error(data.message || "Failed to save app");
       }
-    } catch (e) { 
+    } catch (e: any) { 
       console.error(" [DASHBOARD] ❌ Save App Error:", e);
-      alert("Error: Application could not be created. Check console for details.");
+      toast.error(e.message || "Failed to create application.");
     }
   }
 
   // Delete App helper
   async function deleteApp(id: string) {
     try {
-      await fetch(`/api/admin/apps/${id}`, { method: "DELETE" });
+      await fetch(`/api/admin/apps/${id}`, { 
+        method: "DELETE",
+        headers: getAuthHeader()
+      });
       setApps(prev => prev.filter(a => a.id !== id));
-    } catch (e) { console.error(e); }
+      toast.success("Application deleted.");
+    } catch (e) { 
+      console.error(e); 
+      toast.error("Failed to delete application.");
+    }
   }
 
   // Update App helper
@@ -170,7 +195,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch(`/api/admin/apps/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader()
+        },
         body: JSON.stringify(updates)
       });
       setApps(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
@@ -182,18 +210,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader()
+        },
         body: JSON.stringify(newUser)
       });
       const data = await res.json();
-      if (data.success) setManagedUsers(prev => [data.user, ...prev]);
-    } catch (e) { console.error(e); }
+      if (data.success) {
+        setManagedUsers(prev => [data.user, ...prev]);
+        toast.success("User created successfully!");
+      }
+    } catch (e) { 
+      console.error(e); 
+      toast.error("Failed to create user.");
+    }
   }
 
   // Delete User helper
   async function deleteUser(id: string) {
     try {
-      await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      await fetch(`/api/admin/users/${id}`, { 
+        method: "DELETE",
+        headers: getAuthHeader()
+      });
       setManagedUsers(prev => prev.filter(u => u.id !== id));
     } catch (e) { console.error(e); }
   }
@@ -203,7 +243,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch(`/api/admin/users/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader()
+        },
         body: JSON.stringify(updates)
       });
       setManagedUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));

@@ -1,85 +1,37 @@
-# SYN AUTH Dashboard
+# 🚀 SYN AUTH PROFESSIONAL KIOSK
 
-  Premium hacker-style SaaS authentication & licensing dashboard.
-  Deep black + dark red UI with Framer Motion animations and full CRUD.
+A high-performance, enterprise-grade authentication and license management platform.
 
-  ## Quick Start
+## 🛠️ Production Deployment (Render)
 
-  ```bash
-  npm install
-  npm run dev
-  ```
+1. **Connect Repository**: Link your GitHub repo to a New Web Service on Render.
+2. **Build Settings**:
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+3. **Environment Variables**:
+   - `JWT_SECRET`: A long secure string for token signing.
+   - `NODE_ENV`: `production`
+   - `PORT`: `3000` (Render will automatically assign a port, but the server is ready).
 
-  Then open http://localhost:5173
+## 🔐 Advanced Security System
 
-  ## Stack
+- **JWT Authentication**: Secure stateless sessions with 7-day expiration.
+- **Bcrypt Hashing**: Industry-standard password encryption (salted & hashed).
+- **Protected Routes**: Dashboard and Admin APIs are shielded behind JWT middleware.
+- **HWID Locking**: Hardware-level protection to prevent license sharing.
 
-  - React 19 + Vite + TypeScript
-  - Tailwind CSS v4 (no config file needed — theme in src/index.css)
-  - Framer Motion animations
-  - Recharts (dashboard charts)
-  - Wouter (lightweight routing)
-  - Radix UI / shadcn components
+## 📱 Features
 
-  ## Pages
+- **Real-time Dashboard**: Live analytics and activity tracking.
+- **Auto-App Generation**: New users get a workspace instantly on signup.
+- **SDK Integration**: Ready-to-use C# and JS integration snippets.
+- **Global Stability**: Optimized for low-latency global access via Render.
 
-  | Route | Description |
-  |-------|-------------|
-  | / | Dashboard — stats, activity chart, user status donut |
-  | /applications | App CRUD + credentials panel (Owner ID, App Secret, version) |
-  | /licenses | License key table with status badges |
-  | /users | User & Key management — create, pause, delete |
-  | /integration | SDK code generator + live key validator |
-  | /tokens | API token management |
-  | /settings | Profile, password, security toggles |
+## 🏗️ Architecture
 
-  ## SDK Integration
+- **Frontend**: React 19, Vite, Framer Motion, Tailwind CSS v4.
+- **Backend**: Node.js, Express, JWT, Bcrypt.
+- **Storage**: Persistent JSON database (scalable to hundreds of users).
 
-  See `sdk/synauth.js` for the standalone SDK.
-
-  Or use the dashboard Integration page to auto-generate a version
-  with your real keys pre-embedded. Copy and paste into any project.
-
-  ### Quick SDK example
-
-  ```html
-  <script src="sdk/synauth.js"></script>
-  <script>
-    const result = validateKey("SYNAUTH-XXXX-XXXX-XXXX", getHwid());
-    if (result.success) {
-      console.log("Access Granted:", result.user);
-    } else {
-      console.log("Access Denied:", result.error);
-      // Errors: INVALID_KEY | PAUSED | EXPIRED | HWID_MISMATCH
-    }
-  </script>
-  ```
-
-  ## Project Structure
-
-  ```
-  src/
-    lib/
-      app-store.tsx    — shared React context (apps + managed users)
-      key-system.ts    — validateKey(), generateKey(), expiryFromPreset()
-      mock-data.ts     — seed data & TypeScript types
-      utils.ts         — cn() helper
-    pages/
-      Dashboard.tsx    — stats + charts
-      Applications.tsx — app CRUD + credentials + SDK modal
-      Integration.tsx  — SDK generator, live validator, docs
-      Users.tsx        — user/key table with full CRUD
-      Licenses.tsx     — license overview
-      Tokens.tsx       — API token cards
-      Settings.tsx     — profile & security settings
-    components/
-      Layout.tsx            — shell with particle background
-      Sidebar.tsx           — nav sidebar
-      Navbar.tsx            — top bar
-      ParticleBackground.tsx — animated red canvas particles
-      ui/                   — shadcn/ui components
-
-  sdk/
-    synauth.js   — standalone SDK (no dependencies, browser + Node.js)
-  ```
-  
+---
+© 2026 SYN AUTH SECURITY INC.
