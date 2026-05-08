@@ -14,7 +14,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Database Setup ──────────────────────────────────────────────────────────
+console.log(" \n 🚀 SYN AUTH PROFESSIONAL SERVER STARTING...");
+console.log(" ═══════════════════════════════════════════════════════");
 
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
@@ -24,7 +25,17 @@ const APPS_FILE = path.join(DATA_DIR, 'apps.json');
 
 function readDB(file) {
   try {
-    if (!fs.existsSync(file)) return [];
+    if (!fs.existsSync(file)) {
+      // Try to seed from root files if they exist
+      const fileName = path.basename(file);
+      const rootSeed = fileName === 'users.json' ? './users_mock.json' : './synauth_apps_backup.json';
+      if (fs.existsSync(rootSeed)) {
+        const content = fs.readFileSync(rootSeed, 'utf8');
+        fs.writeFileSync(file, content);
+        return JSON.parse(content);
+      }
+      return [];
+    }
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) { return []; }
 }
@@ -138,14 +149,54 @@ app.post('/api/1.2/', (req, res) => {
   }
 
   if (type === 'register') {
-    const existingKey = users.find(u => u.key === keyStr && (u.username === "Unused" || !u.username));
-    if (!existingKey) return res.json({ success: false, message: "License key not found or already used." });
-    
-    existingKey.username = username;
-    existingKey.password = pass;
-    existingKey.hwid = hwid;
-    writeDB(USERS_FILE, users);
-    return res.json({ success: true, message: "Registered successfully!" });
+    const existingUser = users.find(u => u.username?.toLowerCase() === username.toLowerCase());
+    if (existingUser) return res.json({ success: false, message: "User already exists." });
+
+    // Check if registering with a key
+    if (keyStr && keyStr !== "") {
+      const existingKey = users.find(u => u.key === keyStr && (u.username === "Unused" || !u.username));
+      if (!existingKey) return res.json({ success: false, message: "License key not found or already used." });
+      
+      existingKey.username = username;
+      existingKey.password = pass;
+      existingKey.hwid = hwid;
+      writeDB(USERS_FILE, users);
+    } else {
+      // Create new user (e.g. from Google login)
+      const newUser = {
+        id: "mu_" + Date.now(),
+        username,
+        password: pass,
+        email: params.email || "",
+        key: "SYNAUTH-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
+        expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(), // 1 year for new users
+        hwidLock: false,
+        hwid: hwid || null,
+        status: "active",
+        createdAt: new Date().toISOString()
+      };
+      users.push(newUser);
+      writeDB(USERS_FILE, users);
+    }
+
+    // AUTOMATIC APP CREATION
+    console.log(` [ADMIN] 🚀 Automatically creating app for ${username}`);
+    const newApp = {
+      id: "app_" + Math.random().toString(36).substring(7),
+      name: username.split('.')[0] + " App", // Use Gmail name part
+      description: `Default application for ${username}`,
+      status: "active",
+      users: 1,
+      licenses: 1,
+      createdAt: new Date().toISOString(),
+      ownerId: "OWN-" + Math.random().toString(16).substring(2, 6).toUpperCase(),
+      appSecret: "sa_sec_" + Math.random().toString(36).substring(2, 10),
+      version: "1.0"
+    };
+    apps.push(newApp);
+    writeDB(APPS_FILE, apps);
+
+    return res.json({ success: true, message: "Registered successfully and application created!" });
   }
 
   let user = users.find(u => 

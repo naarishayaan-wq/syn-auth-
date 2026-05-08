@@ -106,12 +106,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetch("/api/admin/users"),
           fetch("/api/admin/apps")
         ]);
+        if (!uRes.ok || !aRes.ok) {
+          console.error("Server returned error:", uRes.status, aRes.status);
+          setManagedUsers([]);
+          setApps([]);
+          setLoading(false);
+          return;
+        }
+
         const uData = await uRes.json();
         const aData = await aRes.json();
         
-        setManagedUsers(uData);
-        setApps(aData);
-        if (aData.length > 0) setSelectedAppId(aData[0].id);
+        setManagedUsers(Array.isArray(uData) ? uData : []);
+        setApps(Array.isArray(aData) ? aData : []);
+        if (Array.isArray(aData) && aData.length > 0) setSelectedAppId(aData[0].id);
       } catch (e) {
         console.error("Failed to fetch data:", e);
       } finally {
