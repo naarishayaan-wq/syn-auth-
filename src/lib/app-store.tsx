@@ -134,6 +134,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     } catch (e) { console.error(e); }
   }
 
+  // Delete App helper
+  async function deleteApp(id: string) {
+    try {
+      await fetch(`/api/admin/apps/${id}`, { method: "DELETE" });
+      setApps(prev => prev.filter(a => a.id !== id));
+    } catch (e) { console.error(e); }
+  }
+
+  // Update App helper
+  async function updateApp(id: string, updates: Partial<AppCredential>) {
+    try {
+      await fetch(`/api/admin/apps/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates)
+      });
+      setApps(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    } catch (e) { console.error(e); }
+  }
+
   // Save User helper
   async function saveUser(newUser: ManagedUser) {
     try {
@@ -205,7 +225,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppStoreContext.Provider value={{ 
-      apps, setApps: saveApp as any, managedUsers, setManagedUsers: saveUser as any, 
+      apps, setApps: saveApp as any, deleteApp, updateApp,
+      managedUsers, setManagedUsers: saveUser as any, 
       deleteUser, updateUser,
       licenses, setLicenses, auditLogs, addAuditLog,
       refreshSecret, createLicense, selectedAppId, setSelectedAppId, isPremium, setIsPremium 

@@ -244,7 +244,7 @@ function AppCard({
 }
 
 export default function Applications() {
-  const { apps, setApps, managedUsers, refreshSecret } = useAppStore();
+  const { apps, setApps: saveApp, deleteApp, updateApp, managedUsers, refreshSecret } = useAppStore();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalMode>(null);
@@ -281,7 +281,7 @@ export default function Applications() {
   function handleCreate() {
     if (!form.name.trim()) return;
     const newApp: AppCredential = {
-      id: `app_${Date.now()}`,
+      id: "", // Server will set ID
       name: form.name,
       description: form.description,
       status: "active",
@@ -292,28 +292,24 @@ export default function Applications() {
       appSecret: `sa_sec_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
       version: "1.0",
     };
-    setApps((prev: AppCredential[]) => [newApp, ...prev]);
+    saveApp?.(newApp as any);
     setModal(null);
   }
 
   function handleEdit() {
     if (!selected || !form.name.trim()) return;
-    setApps((prev: AppCredential[]) =>
-      prev.map((a: AppCredential) => (a.id === selected.id ? { ...a, name: form.name, description: form.description } : a))
-    );
+    updateApp?.(selected.id, { name: form.name, description: form.description });
     setModal(null);
   }
 
   function handleDelete() {
     if (!selected) return;
-    setApps((prev: AppCredential[]) => prev.filter((a: AppCredential) => a.id !== selected.id));
+    deleteApp?.(selected.id);
     setModal(null);
   }
 
   function handleTogglePause(app: AppCredential) {
-    setApps((prev: AppCredential[]) =>
-      prev.map((a: AppCredential) => (a.id === app.id ? { ...a, status: a.status === "active" ? "paused" : "active" } : a))
-    );
+    updateApp?.(app.id, { status: app.status === "active" ? "paused" : "active" });
   }
 
   function copySDK() {

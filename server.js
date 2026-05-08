@@ -63,6 +63,16 @@ app.post('/api/admin/apps', (req, res) => {
   writeDB(APPS_FILE, apps);
   res.json({ success: true, app: newApp });
 });
+app.delete('/api/admin/apps/:id', (req, res) => {
+  const apps = readDB(APPS_FILE).filter(a => a.id !== req.params.id);
+  writeDB(APPS_FILE, apps);
+  res.json({ success: true });
+});
+app.put('/api/admin/apps/:id', (req, res) => {
+  const apps = readDB(APPS_FILE).map(a => a.id === req.params.id ? { ...a, ...req.body } : a);
+  writeDB(APPS_FILE, apps);
+  res.json({ success: true });
+});
 
 // ── KEYAUTH SDK API (v1.2) ───────────────────────────────────────────────────
 
