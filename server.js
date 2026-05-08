@@ -47,12 +47,26 @@ app.post('/api/1.2/', (req, res) => {
 
   let users = getLocalUsers();
 
+  if (type === 'sync') {
+    try {
+      const usersData = params.get('users');
+      if (usersData) {
+        const syncedUsers = JSON.parse(usersData);
+        saveLocalUsers(syncedUsers);
+        console.log(` [API] 🔄 Synced ${syncedUsers.length} users.`);
+      }
+      return res.json({ success: true, message: "Synchronized successfully." });
+    } catch (e) {
+      return res.json({ success: false, message: "Sync failed: " + e.message });
+    }
+  }
+
   if (type === 'init') {
     return res.json({
       success: true,
       message: "Initialized",
       sessionid: "sess_" + Math.random().toString(36).substring(7),
-      info: {
+      appinfo: { // Changed from 'info' to 'appinfo' to match KeyAuth.cs
         numUsers: users.length.toString(),
         numOnlineUsers: "1",
         numKeys: "100",
@@ -90,28 +104,55 @@ app.post('/api/1.2/', (req, res) => {
         : users.find(u => u.key === key));
 
   if (!user && type === 'login') {
+    // Check if logging in with key as username
     user = users.find(u => u.key === username);
   }
 
   if (user) {
+    // 1. Check account status
+    if (user.status === 'paused') {
+      return res.json({ success: false, message: "Your account is paused. Contact support." });
+    }
+
+    // 2. Check HWID Lock
+    const clientHwid = params.get('hwid');
+    if (user.hwidLock) {
+      if (!user.hwid && clientHwid) {
+        // First login: Register HWID
+        user.hwid = clientHwid;
+        saveLocalUsers(users);
+        console.log(` [API] 🔐 HWID Registered for user: ${user.username}`);
+      } else if (user.hwid && user.hwid !== clientHwid) {
+        return res.json({ success: false, message: "HWID mismatch. This key is locked to another device." });
+      }
+    }
+
+    // 3. Check Expiry
+    const now = new Date();
+    const expiry = new Date(user.expiresAt || Date.now());
+    if (expiry < now) {
+      return res.json({ success: false, message: "Your subscription has expired." });
+    }
+
     return res.json({
       success: true,
       message: "Logged in successfully!",
+      sessionid: "sess_" + Math.random().toString(36).substring(7),
       info: {
-        username: user.username,
+        username: user.username || "KeyUser",
         ip: req.ip,
-        hwid: params.get('hwid') || 'remote_hwid',
+        hwid: clientHwid || user.hwid || 'remote_hwid',
         createdate: Math.floor(new Date(user.createdAt || Date.now()).getTime() / 1000).toString(),
         lastlogin: Math.floor(Date.now() / 1000).toString(),
-        expiry: Math.floor(new Date(user.expiresAt).getTime() / 1000).toString(),
+        expiry: Math.floor(expiry.getTime() / 1000).toString(),
         subscriptions: [
-          { subscription: "Default", key: user.key || "SYNAUTH-KEY", expiry: Math.floor(new Date(user.expiresAt).getTime() / 1000).toString(), timeleft: "86400" }
+          { subscription: "Default", key: user.key || "SYNAUTH-KEY", expiry: Math.floor(expiry.getTime() / 1000).toString(), timeleft: Math.floor((expiry.getTime() - now.getTime()) / 1000).toString() }
         ]
       }
     });
   }
 
-  res.json({ success: false, message: "Invalid username or password." });
+  res.json({ success: false, message: "Invalid credentials or key." });
 });
 
 // SPA fallback

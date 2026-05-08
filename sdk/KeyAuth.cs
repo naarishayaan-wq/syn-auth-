@@ -191,8 +191,28 @@ namespace KeyAuth
         {
             try {
                 if (string.IsNullOrEmpty(json)) return "";
+                
+                // If it's HTML, return empty (prevents parsing errors)
+                if (json.TrimStart().StartsWith("<")) return "";
+
                 string pattern;
                 if (!string.IsNullOrEmpty(obj)) {
+                    // Try to find the object first, then the key inside it
+                    // Support both "appinfo" and "info" for compatibility
+                    if (obj == "appinfo") {
+                        Match m = Regex.Match(json, "\"info\"\\s*:\\s*\\{");
+                        if (!m.Success) m = Regex.Match(json, "\"appinfo\"\\s*:\\s*\\{");
+                        if (m.Success) {
+                            // Extract content between braces for this object
+                            int start = m.Index + m.Length;
+                            int end = json.IndexOf('}', start);
+                            if (end > start) {
+                                string sub = json.Substring(start, end - start);
+                                return get_json_val(sub, key);
+                            }
+                        }
+                    }
+
                     pattern = "\"" + obj + "\":\\s*[\\{\\[][^\\{\\[]*?\"" + key + "\":\\s*\"(.*?)\"";
                     Match match = Regex.Match(json, pattern);
                     if (match.Success) return match.Groups[1].Value;
@@ -202,11 +222,11 @@ namespace KeyAuth
                     if (match.Success) return match.Groups[1].Value;
                 } else {
                     pattern = "\"" + key + "\":\\s*\"(.*?)\"";
-                    Match match = Regex.Match(json, pattern);
+                    Match match = Regex.Match(json, pattern, RegexOptions.IgnoreCase);
                     if (match.Success) return match.Groups[1].Value;
 
                     pattern = "\"" + key + "\":\\s*(true|false|[0-9\\.]+)";
-                    match = Regex.Match(json, pattern);
+                    match = Regex.Match(json, pattern, RegexOptions.IgnoreCase);
                     if (match.Success) return match.Groups[1].Value;
                 }
                 return "";
