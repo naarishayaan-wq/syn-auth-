@@ -26,7 +26,7 @@ namespace KeyAuth
         // Development Settings
         // Set to TRUE for local testing (localhost:5173)
         // Set to FALSE for production testing on Render (syn-auth.onrender.com)
-        public bool is_demo = true; 
+        public bool is_demo = false;
 
         // Production API Endpoint
         private string prod_url = "https://syn-auth.onrender.com/api/1.2/";
