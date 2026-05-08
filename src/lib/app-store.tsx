@@ -124,14 +124,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   // Save App helper
   async function saveApp(newApp: AppCredential) {
     try {
+      console.log(" [DASHBOARD] 📱 Saving app to server...");
       const res = await fetch("/api/admin/apps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newApp)
       });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error: ${res.status} - ${errorText}`);
+      }
+
       const data = await res.json();
-      if (data.success) setApps(prev => [data.app, ...prev]);
-    } catch (e) { console.error(e); }
+      if (data.success) {
+        setApps(prev => [data.app, ...prev]);
+        console.log(" [DASHBOARD] ✅ App saved successfully");
+      } else {
+        throw new Error(data.message || "Failed to save app");
+      }
+    } catch (e) { 
+      console.error(" [DASHBOARD] ❌ Save App Error:", e);
+      alert("Error: Application could not be created. Check console for details.");
+    }
   }
 
   // Delete App helper
